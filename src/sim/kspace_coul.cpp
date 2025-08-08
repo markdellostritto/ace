@@ -36,7 +36,8 @@ void Coul::init(const Structure& struc){
 	const int& N=struc.nAtoms();
 	const Eigen::Matrix3d& R=struc.R();
 	const Eigen::Matrix3d& K=struc.K();
-	Eigen::Vector3d L; L<<R.col(0).norm(),R.col(1).norm(),R.col(2).norm();
+	const Eigen::Vector3d L=(Eigen::Vector3d()<<R.col(0).norm(),R.col(1).norm(),R.col(2).norm()).finished();
+	//Eigen::Vector3d L; L<<R.col(0).norm(),R.col(1).norm(),R.col(2).norm();
 	q2_=0;
 	for(int i=0; i<N; ++i) q2_+=struc.charge(i)*struc.charge(i);
 	if(q2_==0) throw std::invalid_argument("KSpace::Coul::init(const Structure&): zero abs charge.");
@@ -56,12 +57,12 @@ void Coul::init(const Structure& struc){
 		const double pre=2.0*q2_*alpha_/(L[i]*L[i]*RadPI*sqrt(N));
 		const double expf=exp(-PI*PI*a2i);
 		do{
-			nk_[i]++;
+			++nk_[i];
 			const double kv=(K.col(i)*nk_[i]).norm();
 			err=pre*pow(expf,kv*kv)/sqrt(kv);
 		}while(err>prec_);
 	}
-	nk_*=5;
+	nk_*=5;//needed to match LAMMPS
 	if(KSPACEC_PRINT_DATA>0) std::cout<<"nk_ = "<<nk_.transpose()<<"\n";
 	
 	//compute k-vecs and k-amps
@@ -86,8 +87,8 @@ void Coul::init(const Structure& struc){
 	vc_=-2.0*alpha_/RadPI;
 }
 
-double Coul::energy(Structure& struc, const NeighborList& nlist)const{
-	if(KSPACEC_PRINT_FUNC>0) std::cout<<"KSpace::Coul::energy(const Structure&,const NeighborList&)const:\n";
+double Coul::energy(Structure& struc)const{
+	if(KSPACEC_PRINT_FUNC>0) std::cout<<"KSpace::Coul::energy(const Structure&)const:\n";
 	const double ke=units::Consts::ke()*eps_;
 	double energy=0;
 	const int natoms=struc.nAtoms();
@@ -104,7 +105,7 @@ double Coul::energy(Structure& struc, const NeighborList& nlist)const{
 		energy+=ka_[n]*(sfr*sfr+sfi*sfi);
 	}
 	//constant
-	energy+=q2_*vc_;
+	energy+=econst_?q2_*vc_:0.0;
 	//net charge
 	double qtot=0;
 	for(int i=0; i<natoms; ++i){
@@ -112,12 +113,13 @@ double Coul::energy(Structure& struc, const NeighborList& nlist)const{
 	}
 	energy-=qtot*qtot*PI/(alpha_*alpha_*struc.vol());
 	//return total
-	struc.pe()+=ke*0.5*energy;
-	return ke*0.5*energy;
+	const double pe=ke*0.5*energy;
+	struc.pe()+=pe;
+	return pe;
 }
 
-double Coul::compute(Structure& struc, const NeighborList& nlist)const{
-	if(KSPACEC_PRINT_FUNC>0) std::cout<<"KSpace::Coul::compute(const Structure&,const NeighborList&)const:\n";
+double Coul::compute(Structure& struc)const{
+	if(KSPACEC_PRINT_FUNC>0) std::cout<<"KSpace::Coul::compute(const Structure&)const:\n";
 	const double ke=units::Consts::ke()*eps_;
 	double energy=0;
 	const int natoms=struc.nAtoms();
@@ -151,12 +153,13 @@ double Coul::compute(Structure& struc, const NeighborList& nlist)const{
 	}
 	energy-=qtot*qtot*PI/(alpha_*alpha_*struc.vol());
 	//return total
-	struc.pe()+=ke*0.5*energy;
-	return ke*0.5*energy;
+	const double pe=ke*0.5*energy;
+	struc.pe()+=pe;
+	return pe;
 }
 
-double Coul::compute_explicit(Structure& struc, const NeighborList& nlist)const{
-	if(KSPACEC_PRINT_FUNC>0) std::cout<<"KSpace::Coul::compute_explicit(const Structure&,const NeighborList&)const:\n";
+double Coul::compute_explicit(Structure& struc)const{
+	if(KSPACEC_PRINT_FUNC>0) std::cout<<"KSpace::Coul::compute_explicit(const Structure&)const:\n";
 	const double ke=units::Consts::ke()*eps_;
 	double energy=0;
 	const int natoms=struc.nAtoms();
@@ -188,8 +191,8 @@ double Coul::compute_explicit(Structure& struc, const NeighborList& nlist)const{
 	return ke*0.5*energy;
 }
 
-double Coul::compute_brute(Structure& struc, const NeighborList& nlist)const{
-	if(KSPACEC_PRINT_FUNC>0) std::cout<<"KSpace::Coul::compute_brute(const Structure&,const NeighborList&)const:\n";
+double Coul::compute_brute(Structure& struc)const{
+	if(KSPACEC_PRINT_FUNC>0) std::cout<<"KSpace::Coul::compute_brute(const Structure&)const:\n";
 	const double ke=units::Consts::ke()*eps_;
 	double energy=0;
 	const int natoms=struc.nAtoms();

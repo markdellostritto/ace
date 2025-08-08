@@ -5,7 +5,6 @@
 //mem
 #include "mem/serialize.hpp"
 // structure
-#include "struc/neighbor.hpp"
 #include "struc/structure.hpp"
 // sim
 #include "sim/kspace.hpp"
@@ -49,10 +48,10 @@ public:
 	
 	//==== member functions ====
 	void init(const Structure& struc);
-	double energy(Structure& struc, const NeighborList& nlist)const;
-	double compute(Structure& struc, const NeighborList& nlist)const;
-	double compute_explicit(Structure& struc, const NeighborList& nlist)const;
-	double compute_brute(Structure& struc, const NeighborList& nlist)const;
+	double energy(Structure& struc)const;
+	double compute(Structure& struc)const;
+	double compute_explicit(Structure& struc)const;
+	double compute_brute(Structure& struc)const;
 	
 };
 

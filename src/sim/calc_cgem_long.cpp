@@ -119,7 +119,7 @@ double CalcCGemLong::energy(Structure& struc, const NeighborList& nlist){
     if(CALC_CGEM_LONG_PRINT_FUNC>0) std::cout<<"CalcCGemLong::energy(const Structure&,const NeighborList&):\n";
     // k-space
 	coul_.init(struc);
-	const double energyK=coul_.energy(struc,nlist);
+	const double energyK=coul_.energy(struc);
 	const double a=coul_.alpha();
     // r-space
     const double eps0=units::Consts::eps0();
@@ -165,7 +165,7 @@ double CalcCGemLong::compute(Structure& struc, const NeighborList& nlist){
     if(CALC_CGEM_LONG_PRINT_FUNC>0) std::cout<<"CalcCGemLong::compute(const Structure&,const NeighborList&):\n";
     // k-space
     coul_.init(struc);
-    const double energyK=coul_.compute(struc,nlist);
+    const double energyK=coul_.compute(struc);
     const double a=coul_.alpha();
     // r-space
     const double eps0=units::Consts::eps0();
