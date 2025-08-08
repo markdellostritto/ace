@@ -1,0 +1,12 @@
+seed -1
+tolerance 2.0
+filetype xyz
+output output.xyz
+pbc 12.0 12.0 12.0
+structure Na.xyz
+  number 25
+end structure
+structure Cl.xyz
+  number 25
+end structure
+

@@ -1,0 +1,38 @@
+# lmp_sp
+
+variable	T equal 300
+variable	dt equal 0.001
+
+# general parameters
+dimension       3
+units           metal
+boundary        p p p
+timestep        ${dt} # ps
+
+# atom/molecule styles
+atom_style      charge
+
+# start
+read_data	input.data
+
+# interaction styles (tosi-fumi
+kspace_style	ewald 1e-12
+pair_style	coul/long 6.0
+pair_coeff	* *
+
+# fixes
+fix		Ensemble all nvt temp $T $T $(100.0*dt) 
+
+# thermo output
+thermo		20000
+thermo_style	custom step etotal ke evdwl ecoul elong press vol
+thermo_modify	norm no
+
+# data output
+dump		DUMP all custom 20000 lmp_sp.dump id type q x y z fx fy fz
+dump_modify	DUMP sort id
+restart		500000 lmp_sp.restart
+
+# run instruction
+run		1
+

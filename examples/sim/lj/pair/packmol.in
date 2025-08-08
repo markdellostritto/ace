@@ -1,0 +1,8 @@
+seed -1
+tolerance 2.0
+filetype xyz 
+output cluster.xyz
+structure lj.xyz
+	number 8
+	inside sphere 0.0 0.0 0.0 2.0
+end structure

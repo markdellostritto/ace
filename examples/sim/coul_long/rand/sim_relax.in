@@ -1,0 +1,23 @@
+job	min
+units	metal
+atom	name type mass charge posn vel force
+
+type	Cl
+type	Na
+
+format	xyz
+fstruc	input.xyz
+
+engine  1
+int	quickmin 1.0e-1
+#int	cg 1.0e-3
+#int	fire dt     dtmin  dtmax  fdtd fdti alpha falpha ndelay nmax
+#int	fire 1.0e-1 1.0e-4 1.0e1 0.5  1.1  0.25  0.99   5     10
+ftol    1.0e-3
+
+calc	coul_long 6.0 1.0e-8
+
+nstep	1
+nprint	1
+nwrite	1
+

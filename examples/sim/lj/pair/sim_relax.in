@@ -1,0 +1,26 @@
+job	min
+units	metal
+atom	name type mass charge posn vel force
+
+type	X
+
+format	xyz
+#fstruc	lj2.xyz
+#fstruc	lj3.xyz
+fstruc	lj8.xyz
+shift	10 10 10
+
+engine  1
+#int	quickmin 1.0e-1
+#int	cg 1.0e-3
+#int	fire dt     dtmin  dtmax  fdtd fdti alpha falpha ndelay nmax
+int	fire 1.0e-1 1.0e-4 1.0e1 0.5  1.1  0.25  0.99   5     10
+ftol    1.0e-3
+
+calc	lj_cut 6.0 1.0 1.0
+coeff	lj_cut 1 1 1.0 1.0
+
+nstep	1000
+nprint	1
+nwrite	1
+
