@@ -1,0 +1,11 @@
+set logscale xy
+set grid xtics ytics mxtics mytics
+set key font ',14'
+set xlabel 'optimization step'
+set ylabel 'error'
+w=1.2
+set term pngcairo
+set output 'gamma.png'
+plot\
+	'nn_train_error.dat' using 1:2 with lines lw w lc 'black' title ''
+

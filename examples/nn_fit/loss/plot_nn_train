@@ -1,0 +1,20 @@
+# plot settings
+set xlabel 'Abscissa' font ',14'
+set ylabel 'Ordinate' font ',14'
+w=1.5
+set grid xtics ytics lw 1.5
+set xzeroaxis lw 1.8
+set yzeroaxis lw 1.8
+set key left font ',14'
+# output
+set term pngcairo
+set output 'nn_train.png'
+# plot
+plot [:]\
+	'gauss_train.dat' using 1:2 with points lw w lc 'black' title 'train',\
+	'nn_mse_train.dat' using 1:2 with points lw w lc 'red' title 'mse',\
+        'nn_asinh_train.dat' using 1:2 with points lw w lc 'gold' title 'asinh',\
+        'nn_huber_train.dat' using 1:2 with points lw w lc 'blue' title 'huber',\
+	exp(-0.2*x**2)*cos(pi*x) with lines lw 3 lc 'green' title 'exact'
+
+

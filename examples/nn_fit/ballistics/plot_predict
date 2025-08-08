@@ -1,0 +1,15 @@
+# plot settings
+set xlabel 'Depth - Experiment' font ',14'
+set ylabel 'Depth - Prediction' font ',14'
+set xtics font ',12'
+set ytics font ',12'
+set grid xtics ytics lw 2
+# plot
+plot [:] [:]\
+	'predict.dat' using 1:2 with points lw 2 lc 'blue' ps 2 pt 1 title '',\
+	x with lines lw 2 lc 'black' dt '-' title ''
+pause -1 'continue'
+# write
+set term pngcairo
+set output 'predict.png'
+replot

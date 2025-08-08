@@ -1,0 +1,42 @@
+# data
+dim_in		1
+dim_out		1
+data_train	gauss_train.dat
+data_val	gauss_val.dat
+data_test	gauss_test.dat
+file_error	nn_train_error.dat
+
+# nn
+n_hidden	6 6 
+transfer	swish
+init		he
+idev		1.0
+
+# optimization - model
+algo		nogi 1.0e-16
+gamma		1e-3
+lambda		0
+decay		exp 1e-6
+loss		mse
+#loss		huber
+#loss		logcosh
+#loss		asinh
+sigma_b		1.0e-3
+sigma_w		1.0e-0
+dist_b		normal
+dist_w		normal
+
+# optimization - data
+stop		fabs
+tol		0e-12
+max_iter	5000000
+n_print		10000
+n_write		10000
+
+# pre-/pos-conditioning
+pre_cond	F
+post_cond	F
+
+#batch size
+nbatch		10
+
