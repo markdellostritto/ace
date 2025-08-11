@@ -33,5 +33,18 @@ std::ostream& operator<<(std::ostream& out, const Constraint& constraint){
 void Constraint::read(Token& token){
 	//constraint name indices
 	indices_.clear();
-	while(!token.end()) indices_.push_back(std::atoi(token.next().c_str()));
+	while(!token.end()){
+		const std::string str=token.next();
+		Token atoken(str,":");
+		int beg=0,end=0,stride=1;
+		beg=std::atoi(atoken.next().c_str());
+		if(!atoken.end()){
+				end=std::atoi(atoken.next().c_str());
+				if(!atoken.end()){
+					stride=std::atoi(atoken.next().c_str());
+				}
+		} else end=beg;
+		beg--; end--;
+		for(int i=beg; i<=end; i+=stride) indices_.push_back(i);
+	}
 }
