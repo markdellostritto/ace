@@ -13,21 +13,21 @@ using math::special::fmexp;
 
 //==== contructors/destructors ====
 
-CalcCGemLong::CalcCGemLong():Calculator(Calculator::Name::CGEM_CUT){
+CalcCGemLong::CalcCGemLong():Calculator(Calculator::Name::CGEM_LONG){
     lambdaC_=1.0;
     lambdaS_=1.0;
     eps_=1.0;
     prec_=1.0e-6;
 }
 
-CalcCGemLong::CalcCGemLong(double rc):Calculator(Calculator::Name::CGEM_CUT,rc){
+CalcCGemLong::CalcCGemLong(double rc):Calculator(Calculator::Name::CGEM_LONG,rc){
     lambdaC_=1.0;
     lambdaS_=1.0;
     eps_=1.0;
     prec_=1.0e-6;
 }
 
-CalcCGemLong::CalcCGemLong(double rc, double lambdaC, double lambdaS):Calculator(Calculator::Name::CGEM_CUT,rc){
+CalcCGemLong::CalcCGemLong(double rc, double lambdaC, double lambdaS):Calculator(Calculator::Name::CGEM_LONG,rc){
 	lambdaC_=lambdaC;
     lambdaS_=lambdaS;
 	if(lambdaC_<=0) throw std::invalid_argument("CalcCGemLong::CalcCGemLong(double,double,double): Invalid lambdaC\n");
@@ -157,7 +157,7 @@ double CalcCGemLong::energy(Structure& struc, const NeighborList& nlist){
 	}
 	energyR*=0.5;
     struc.pe()+=energyR;
-    //return total energy
+	//return total energy
 	return energyR+energyK;
 }
 
@@ -191,8 +191,8 @@ double CalcCGemLong::compute(Structure& struc, const NeighborList& nlist){
 				double eCoul=0.0;
                 double fCoul=0.0;
 				if(dr>ZERO){
-                    const double pf=1.0/(4.0*PI*eps0)*qi*qj/dr;
-                	const double ferfg=std::erf(muC_(ti,tj)*dr);
+					const double pf=1.0/(4.0*PI*eps0)*qi*qj/dr;
+                	const double ferfg=std::erf(rmuC_(ti,tj)*dr);
                     const double ferfp=std::erf(a*dr);
                     eCoul=pf*(ferfg-ferfp);
                     fCoul=pf/dr2*(
@@ -225,7 +225,7 @@ double CalcCGemLong::compute(Structure& struc, const NeighborList& nlist){
 	energyRep*=0.5;
     struc.pe()+=energyR;
 	//return total energy
-	//std::cout<<"eKspace "<<energyK<<" eCoul "<<energyCoul<<" eOver "<<energyOver<<" eRep "<<energyRep<<"\n";
+	//std::cout<<"eKspace "<<energyK<<" eCoul "<<energyCoul<<" eOver "<<energyOver<<" eRep "<<energyRep<<" alpha "<<a<<"\n";
 	return energyR+energyK;
 }
 
