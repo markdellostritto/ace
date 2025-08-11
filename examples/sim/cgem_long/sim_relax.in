@@ -1,0 +1,29 @@
+job	min
+units	metal
+atom	name type mass charge posn vel force
+
+type	O
+type	H
+type	X
+
+format	xyz
+fstruc	water_X.xyz
+
+engine  1
+int	quickmin 1.0e-1
+#int	cg 1.0e-3
+#int	fire dt     dtmin  dtmax  fdtd fdti alpha falpha ndelay nmax
+#int	fire 1.0e-2 1.0e-4 1.0e1 0.5  1.1  0.25  0.99   5     10
+ftol    1.0e-3
+
+calc	cgem_long 6.0 1.14128 1.03785 1.0 1.0e-8
+coeff	cgem_long 1 0.00469508 0.0148784 0.0
+coeff	cgem_long 2 0.64317 0.027238 0.0
+coeff	cgem_long 3 0.861522 1.50829 10.0
+
+constraint freeze 1:384:1
+
+nstep	100
+nprint	1
+nwrite	1
+
