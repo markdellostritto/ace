@@ -142,7 +142,7 @@ double CalcCGemLong::energy(Structure& struc, const NeighborList& nlist){
 				double eCoul=0.0;
                 if(dr>ZERO){
 					const double pf=1.0/(4.0*PI*eps0)*qi*qj/dr;
-                	const double ferfg=std::erf(muC_(ti,tj)*dr);
+                	const double ferfg=std::erf(rmuC_(ti,tj)*dr);
                     const double ferfp=std::erf(a*dr);
                     eCoul=pf*(ferfg-ferfp);
 				} else eCoul=1.0/(4.0*PI*eps0)*qi*qj*2.0/RadPI*(rmuC_(ti,tj)-a);
