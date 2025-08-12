@@ -61,7 +61,9 @@ public:
 	void clear();
 	void resize(int ntypes);
 	void init();
+	void init(const Structure& struc);
 	//energy/forces
+	double energy(Structure& struc);
 	double compute(Structure& struc);
 	
 	//==== static functions ====

@@ -74,7 +74,24 @@ void Engine::init(){
 	nlist_=NeighborList(rcmax_);
 }
 
+void Engine::init(const Structure& struc){
+	for(int i=0; i<calcs_.size(); ++i){
+		calcs_[i]->init(struc);
+	}
+}
+
 //** energy/forces **
+
+double Engine::energy(Structure& struc){
+	if(ENGINE_PRINT_FUNC>0) std::cout<<"Engine::energy(const Structure&):\n";
+	double energy=0;
+	//compute energy
+	for(int i=0; i<calcs_.size(); ++i){
+		energy+=calcs_[i]->energy(struc,nlist_);
+	}
+	//return energy
+	return energy;
+}
 
 double Engine::compute(Structure& struc){
 	if(ENGINE_PRINT_FUNC>0) std::cout<<"Engine::compute(const Structure&):\n";
