@@ -1671,6 +1671,9 @@ int main(int argc, char* argv[]){
 			bool cgem=false;   //write - cgem potential
 		} write;
 	//external potentials
+		int stride=1;
+		int nsteps=0;
+		double ftol=0;
 		Shell shell;
 		CalcCGemLong calcCGemLong;
 		std::shared_ptr<Integrator> integrator;
@@ -1929,6 +1932,12 @@ int main(int argc, char* argv[]){
 					}
 				} else if(tag=="INTEGRATOR" || tag=="INTG"){
 					Integrator::read(integrator,token);
+				} else if(tag=="STRIDE"){
+					stride=std::atoi(token.next().c_str());
+				} else if(tag=="NSTEPS"){
+					nsteps=std::atoi(token.next().c_str());
+				} else if(tag=="FTOL"){
+					ftol=std::atof(token.next().c_str());
 				}
 				//alias
 				if(tag=="ALIAS"){
@@ -2073,8 +2082,9 @@ int main(int argc, char* argv[]){
 			std::cout<<print::buf(strbuf)<<"\n";
 			std::cout<<print::title("EXTERNAL POTENTIAL",strbuf)<<"\n";
 			if(compute.cgem){
-				std::cout<<"CGEM  = "<<calcCGemLong<<"\n";
-				std::cout<<"SHELL = "<<shell.radius<<" "<<shell.amp<<" "<<shell.rep<<"\n";
+				std::cout<<"STRIDE = "<<stride<<"\n";
+				std::cout<<"CGEM   = "<<calcCGemLong<<"\n";
+				std::cout<<"SHELL  = "<<shell.radius<<" "<<shell.amp<<" "<<shell.rep<<"\n";
 			}
 			std::cout<<print::buf(strbuf)<<"\n";
 			std::cout<<print::title("TYPES",strbuf)<<"\n";
@@ -2101,6 +2111,9 @@ int main(int argc, char* argv[]){
 			if(nadd>0 && perturb==Perturb::NONE) throw std::invalid_argument("Invalid perturbation.");
 			if(nadd>0 && rdist==rng::dist::Name::NONE) throw std::invalid_argument("Invalid radial distribution.");
 			if(nadd>0 && rdelta==0) throw std::invalid_argument("Additional structures must have non-zero rdelta.");
+			if(stride<=0) throw std::invalid_argument("Invalid engine stride.");
+			if(nsteps<0) throw std::invalid_argument("Invalid number of relaxation steps.");
+			if(ftol<0) throw std::invalid_argument("Invalid force tolerance.");
 		}
 		
 		//======== bcast the parameters ========
@@ -2130,24 +2143,37 @@ int main(int argc, char* argv[]){
 		//external potential
 		if(compute.cgem){
 			thread::bcast(WORLD.mpic(),0,calcCGemLong);
+			MPI_Bcast(&stride,1,MPI_INT,0,WORLD.mpic());
+			MPI_Bcast(&nsteps,1,MPI_INT,0,WORLD.mpic());
+			MPI_Bcast(&ftol,1,MPI_DOUBLE,0,WORLD.mpic());
 			MPI_Bcast(&shell.radius,1,MPI_DOUBLE,0,WORLD.mpic());
 			MPI_Bcast(&shell.amp,1,MPI_DOUBLE,0,WORLD.mpic());
 			MPI_Bcast(&shell.rep,1,MPI_DOUBLE,0,WORLD.mpic());
 		}
 		integrator.reset(new Quickmin());
-		integrator->dt()=1.0e-2;
+		integrator->dt()=1.0e-1;
 		//batch
 		MPI_Bcast(&nBatch,1,MPI_INT,0,WORLD.mpic());
 		//structures - format
 		MPI_Bcast(&format,1,MPI_INT,0,WORLD.mpic());
 		//nnpte
 		thread::bcast(WORLD.mpic(),0,nnpte);
+		{
+			int nTypes=types.size();
+			MPI_Bcast(&nTypes,1,MPI_INT,0,WORLD.mpic());
+			if(WORLD.rank()!=0) types.resize(nTypes);
+			for(int i=0; i<nTypes; ++i){
+				thread::bcast(WORLD.mpic(),0,types[i]);
+			}
+		}
 		//alias
-		int naliases=aliases.size();
-		MPI_Bcast(&naliases,1,MPI_INT,0,WORLD.mpic());
-		if(WORLD.rank()!=0) aliases.resize(naliases);
-		for(int i=0; i<aliases.size(); ++i){
-			thread::bcast(WORLD.mpic(),0,aliases[i]);
+		{
+			int naliases=aliases.size();
+			MPI_Bcast(&naliases,1,MPI_INT,0,WORLD.mpic());
+			if(WORLD.rank()!=0) aliases.resize(naliases);
+			for(int i=0; i<aliases.size(); ++i){
+				thread::bcast(WORLD.mpic(),0,aliases[i]);
+			}
 		}
 		
 		//======== set the random seed ========
@@ -2339,6 +2365,150 @@ int main(int argc, char* argv[]){
 			}
 		}
 		
+		//************************************************************************************
+		// EXTERNAL POTENTIALS
+		//************************************************************************************
+		
+		//======== compute CGEM energies ========
+		if(compute.cgem){
+			if(WORLD.rank()==0) std::cout<<"computing CGEM energies\n";
+			//stats
+			double tavg=0;
+			double favg=0;
+			double tmax=0;
+			int nstruc=0;
+			//set the atom type
+			Atom atomCGem;
+			atomCGem.name=true; atomCGem.an=true; atomCGem.type=true;
+			atomCGem.posn=true; atomCGem.force=true; atomCGem.vel=true;
+			atomCGem.mass=true; atomCGem.charge=true; 
+			//set the engine
+			const int tShell=types.size();
+			const int nTypes=types.size()+1;
+			Engine engine;
+			engine.stride()=stride;
+			engine.calcs().push_back(
+				std::make_shared<CalcCGemLong>(calcCGemLong)
+			);
+			engine.constraints().push_back(
+				std::make_shared<ConstraintFreeze>()
+			);
+			engine.resize(nTypes);
+			engine.init();
+			//set parameters
+			CalcCGemLong& eCalc=static_cast<CalcCGemLong&>(*engine.calcs().front());
+			eCalc.radius()=calcCGemLong.radius();
+			eCalc.aOver()=calcCGemLong.aOver();
+			eCalc.aRep()=calcCGemLong.aRep();
+			eCalc.muC()=calcCGemLong.muC();
+			eCalc.muS()=calcCGemLong.muS();
+			eCalc.init();
+			//compute cgem - original
+			for(int n=0; n<nData; ++n){
+				//strucs - original
+				for(int i=0; i<strucs_org[n].size(); i++){
+					std::cout<<"strucs_org["<<n<<"]["<<i<<"]\n";
+					//create new structure with added electrons
+					const int nCores=strucs_org[n][i].nAtoms();
+					const int nShells=nCores;
+					const int nTotal=nCores+nShells;
+					Structure struc=Structure(nTotal,atomCGem);
+					static_cast<Cell&>(struc).init(strucs_org[n][i].R());
+					//set the cores
+					for(int j=0; j<nCores; ++j){
+						struc.name(j)=strucs_org[n][i].name(j);
+						struc.type(j)=strucs_org[n][i].type(j);
+						struc.mass(j)=strucs_org[n][i].mass(j);
+						struc.posn(j)=strucs_org[n][i].posn(j);
+						struc.charge(j)=1.0;
+						struc.force(j).setZero();
+						struc.vel(j).setZero();
+					}
+					//set the shell
+					for(int j=0; j<nShells; ++j){
+						struc.name(nCores+j)="X";
+						struc.type(nCores+j)=tShell;
+						struc.mass(nCores+j)=0.1;
+						struc.posn(nCores+j)=strucs_org[n][i].posn(j);
+						struc.charge(nCores+j)=-1.0;
+						struc.force(nCores+j).setZero();
+						struc.vel(nCores+j).setZero();
+					}
+					//set the constraints
+					std::vector<int> indices;
+					for(int m=0; m<struc.nAtoms(); ++m){
+						if(struc.name(m)!="X"){
+							indices.push_back(m);
+						}
+					}
+					engine.constraints().front()->indices()=indices;
+					//compute the zero-point energy
+					engine.init(struc);
+					const double alpha=eCalc.coul().alpha();
+					double eZero=0;
+					for(int j=0; j<nCores; ++j){
+						const int tc=struc.type(j);
+						const int ts=struc.type(nCores+j);
+						eZero+=units::Consts::ke()*1.0*-1.0*2.0/RadPI*(eCalc.rmuC()(tc,ts)-alpha);
+						eZero+=eCalc.aOver()(tc,ts)*1.0*1.0;
+					}
+					//relax the shells
+					int t=0;
+					double ftot=0;
+					for(t=0; t<nsteps; ++t){
+						//build neighbor list
+						if(t%engine.stride()==0) engine.nlist().build(struc);
+						//compute step
+						integrator->compute(struc,engine);
+						//compute total force
+						ftot=0;
+						for(int m=0; m<struc.nAtoms(); ++m){
+							ftot+=struc.force(m).squaredNorm();
+						}
+						ftot=std::sqrt(ftot/struc.nAtoms());
+						//check break condition
+						if(ftot<ftol) break;
+					}
+					tavg+=t;
+					favg+=ftot;
+					if(t>tmax) tmax=t;
+					nstruc++;
+					//print the structure
+					//std::cout<<struc<<"\n";
+					//for(int j=0; j<struc.nAtoms(); ++j) std::cout<<struc.name(j)<<" "<<struc.mass(j)<<" "<<struc.posn(j).transpose()<<"\n";
+					//compute the energy
+					const double eCoul=engine.compute(struc);
+					const double eCGem=eCoul-eZero;
+					strucs_org[n][i].ecoul()=eCGem;
+					strucs_org[n][i].pe()-=eCGem;
+					//std::cout<<"t = "<<t<<" ftot = "<<ftot<<" ezero "<<eZero<<" ecoul "<<eCoul<<" ecgem "<<eCGem<<" alpha "<<eCalc.coul().alpha()<<" natoms "<<struc.nAtoms()<<"\n";
+					//compute the force
+					for(int j=0; j<nCores; ++j){
+						strucs_org[n][i].force(j).noalias()-=struc.force(j);
+					}
+				}
+			}
+			double tavg_tot=0;
+			double tmax_tot=0;
+			double favg_tot=0;
+			int nstruc_tot=0;
+			MPI_Reduce(&tmax,&tmax_tot,1,MPI_DOUBLE,MPI_MAX,0,WORLD.mpic());
+			MPI_Reduce(&tavg,&tavg_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
+			MPI_Reduce(&favg,&favg_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
+			MPI_Reduce(&nstruc,&nstruc_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
+			if(WORLD.rank()==0){
+				tavg_tot/=nstruc_tot;
+				favg_tot/=nstruc_tot;
+				std::cout<<"tavg = "<<tavg_tot<<"\n";
+				std::cout<<"tmax = "<<tmax_tot<<"\n";
+				std::cout<<"favg = "<<favg_tot<<"\n";
+			}
+		}
+
+		//************************************************************************************
+		// FORCE PERTURBATION
+		//************************************************************************************
+		
 		//======== add new structures ========
 		if(NNPTEFR_PRINT_STATUS>-1 && WORLD.rank()==0) std::cout<<"adding structures\n";
 		std::shared_ptr<rng::dist::Base> rdistp;
@@ -2447,7 +2617,7 @@ int main(int argc, char* argv[]){
 		//************************************************************************************
 		
 		//======== compute CGEM energies ========
-		if(compute.cgem){
+		/*if(compute.cgem){
 			if(WORLD.rank()==0) std::cout<<"computing CGEM energies\n";
 			//stats
 			double tavg=0;
@@ -2463,7 +2633,7 @@ int main(int argc, char* argv[]){
 			const int tShell=types.size();
 			const int nTypes=types.size()+1;
 			Engine engine;
-			engine.stride()=1;
+			engine.stride()=stride;
 			engine.calcs().push_back(
 				std::make_shared<CalcCGemLong>(calcCGemLong)
 			);
@@ -2520,7 +2690,7 @@ int main(int argc, char* argv[]){
 					}
 					engine.constraints().front()->indices()=indices;
 					//compute the zero-point energy
-					eCalc.coul().init(struc);
+					engine.init(struc);
 					const double alpha=eCalc.coul().alpha();
 					double eZero=0;
 					for(int j=0; j<nCores; ++j){
@@ -2529,12 +2699,12 @@ int main(int argc, char* argv[]){
 						eZero+=units::Consts::ke()*1.0*-1.0*2.0/RadPI*(eCalc.rmuC()(tc,ts)-alpha);
 						eZero+=eCalc.aOver()(tc,ts)*1.0*1.0;
 					}
-					//relax the system
+					//relax the shells
 					int t=0;
 					double ftot=0;
-					for(t=0; t<10000; ++t){
+					for(t=0; t<nsteps; ++t){
 						//build neighbor list
-						engine.nlist().build(struc);
+						if(t%engine.stride()==0) engine.nlist().build(struc);
 						//compute step
 						integrator->compute(struc,engine);
 						//compute total force
@@ -2543,22 +2713,19 @@ int main(int argc, char* argv[]){
 							ftot+=struc.force(m).squaredNorm();
 						}
 						ftot=std::sqrt(ftot/struc.nAtoms());
-						if(ftot<1.0e-3) break;
+						//check break condition
+						if(ftot<ftol) break;
 					}
 					tavg+=t;
 					favg+=ftot;
 					if(t>tmax) tmax=t;
 					nstruc++;
-					//print the structure
-					/*std::cout<<struc<<"\n";
-					for(int j=0; j<struc.nAtoms(); ++j){
-						std::cout<<struc.name(j)<<" "<<struc.mass(j)<<" "<<struc.posn(j).transpose()<<"\n";
-					}*/
 					//compute the energy
 					const double eCoul=engine.compute(struc);
-					strucs_org[n][i].ecoul()=eCoul-eZero;
-					strucs_org[n][i].pe()-=eCoul-eZero;
-					//std::cout<<"t = "<<t<<" ftot = "<<ftot<<" ezero "<<eZero<<" ecoul "<<eCoul<<" etot "<<eCoul-eZero<<" alpha "<<eCalc.coul().alpha()<<" natoms "<<struc.nAtoms()<<"\n";
+					const double eCGem=eCoul-eZero;
+					strucs_org[n][i].ecoul()=eCGem;
+					strucs_org[n][i].pe()-=eCGem;
+					//std::cout<<"t = "<<t<<" ftot = "<<ftot<<" ezero "<<eZero<<" ecoul "<<eCoul<<" ecgem "<<eCGem<<" alpha "<<eCalc.coul().alpha()<<" natoms "<<struc.nAtoms()<<"\n";
 				}
 				//compute cgem - total
 				for(int i=0; i<strucs_tot[n].size(); i++){
@@ -2598,7 +2765,7 @@ int main(int argc, char* argv[]){
 					}
 					engine.constraints().front()->indices()=indices;
 					//compute the zero-point energy
-					eCalc.coul().init(struc);
+					engine.init(struc);
 					const double alpha=eCalc.coul().alpha();
 					double eZero=0;
 					for(int j=0; j<nCores; ++j){
@@ -2629,9 +2796,10 @@ int main(int argc, char* argv[]){
 					nstruc++;
 					//compute the energy
 					const double eCoul=engine.compute(struc);
-					strucs_tot[n][i].ecoul()=eCoul-eZero;
-					strucs_tot[n][i].pe()-=eCoul-eZero;
-					//std::cout<<"t = "<<t<<" ftot = "<<ftot<<" ezero "<<eZero<<" ecoul "<<eCoul<<" etot "<<eCoul-eZero<<" alpha "<<eCalc.coul().alpha()<<" natoms "<<struc.nAtoms()<<"\n";
+					const double eCGem=eCoul-eZero;
+					strucs_tot[n][i].ecoul()=eCGem;
+					strucs_tot[n][i].pe()-=eCGem;
+					//std::cout<<"t = "<<t<<" ftot = "<<ftot<<" ezero "<<eZero<<" ecoul "<<eCoul<<" ecgem "<<eCGem<<" alpha "<<eCalc.coul().alpha()<<" natoms "<<struc.nAtoms()<<"\n";
 				}
 			}
 			double tavg_tot=0;
@@ -2649,7 +2817,7 @@ int main(int argc, char* argv[]){
 				std::cout<<"tmax = "<<tmax_tot<<"\n";
 				std::cout<<"favg = "<<favg_tot<<"\n";
 			}
-		}
+		}*/
 		
 		//************************************************************************************
 		// SET INPUTS
@@ -2916,9 +3084,9 @@ int main(int argc, char* argv[]){
 					if(WORLD.rank()==0){
 						std::string file;
 						switch(n){
-							case 0: file="nnp_cgem_train.dat"; break;
-							case 1: file="nnp_cgem_val.dat"; break;
-							case 2: file="nnp_cgem_test.dat"; break;
+							case 0: file="nnp_ecgem_train.dat"; break;
+							case 1: file="nnp_ecgem_val.dat"; break;
+							case 2: file="nnp_ecgem_test.dat"; break;
 							default: file="ERROR.dat"; break;
 						}
 						FILE* writer=fopen(file.c_str(),"w");
