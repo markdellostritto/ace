@@ -246,6 +246,7 @@ int main(int argc, char* argv[]){
 				std::cout<<"building nlist\n";
 				engine.nlist().build(struc);
 				std::cout<<"computing energy\n";
+				engine.init(struc);
 				const double energy=engine.compute(struc);
 				printf("energy = %.10f\n",energy);
 				XYZ::write("out.xyz",atom,struc);
@@ -255,6 +256,7 @@ int main(int argc, char* argv[]){
 				FILE* writer=fopen("out.xyz","w");
 				if(writer==NULL) throw std::runtime_error("Could not open output file.");
 				printf("N T KE PE TE\n");
+				engine.init(struc);
 				for(int t=0; t<nstep; ++t){
 					struc.t()=t;
 					if(t%engine.stride()==0) engine.nlist().build(struc);
@@ -272,6 +274,7 @@ int main(int argc, char* argv[]){
 				FILE* writer=fopen("out.xyz","w");
 				if(writer==NULL) throw std::runtime_error("Could not open output file.");
 				printf("N T KE PE TE\n");
+				engine.init(struc);
 				for(int t=0; t<nstep; ++t){
 					struc.t()=t;
 					if(t%engine.stride()==0) engine.nlist().build(struc);
@@ -294,6 +297,64 @@ int main(int argc, char* argv[]){
 				}
 				fclose(writer); writer=NULL;
 			}break;
+			case Job::NUMDIFF:{
+				std::cout<<"JOB - NUMDIFF\n";
+				const double eps=1.0e-6;
+				Structure strucP=struc;
+				Structure strucM=struc;
+				Structure strucA=struc;
+				Engine engineP=engine;
+				Engine engineM=engine;
+				Engine engineA=engine;
+				engine.init(struc);
+				engineP.init(strucP);
+				engineM.init(strucM);
+				engineA.init(strucA);
+				//compute force - analytical
+				std::cout<<"computing force - analytical\n";
+				engineA.nlist().build(strucA);
+				engineA.compute(strucA);
+				//compute force - numerical
+				std::cout<<"computing force - numerical\n";
+				for(int n=0; n<struc.nAtoms(); ++n){
+					std::cout<<"atom "<<n<<"\n";
+					//reset positions
+					for(int i=0; i<struc.nAtoms(); ++i){
+						strucP.posn(i)=struc.posn(i);
+						strucM.posn(i)=struc.posn(i);
+					}
+					//store position
+					for(int i=0; i<3; ++i){
+						//perturb position
+						strucP.posn(n)=struc.posn(n); strucP.posn(n)[i]+=eps;
+						strucM.posn(n)=struc.posn(n); strucM.posn(n)[i]-=eps;
+						//compute energy - plus
+						engineP.nlist().build(strucP);
+						const double energyP=engineP.energy(strucP);
+						//compute energy - minus
+						engineM.nlist().build(strucM);
+						const double energyM=engineM.energy(strucM);
+						//compute force
+						struc.force(n)[i]=-0.5*(energyP-energyM)/eps;
+					}
+				}
+				for(int n=0; n<struc.nAtoms(); ++n){
+					std::cout<<struc.name(n)<<" "<<struc.force(n).transpose()<<"\n";
+				}
+				//compute error
+				double error=0;
+				for(int n=0; n<struc.nAtoms(); ++n){
+					error+=(strucA.force(n)-struc.force(n)).squaredNorm();
+				}
+				error=sqrt(error/struc.nAtoms());
+				//print forces
+				for(int n=0; n<strucA.nAtoms(); ++n){
+					std::cout<<"fa "<<strucA.name(n)<<" "<<strucA.force(n).transpose()<<"\n";
+					std::cout<<"fn "<<struc.name(n)<<" "<<struc.force(n).transpose()<<"\n";
+				}
+				//print error
+				std::cout<<"error - numdiff = "<<error<<"\n";
+			}
 			default:{
 				std::cout<<"WARNING: Invalid job.";
 			}break;

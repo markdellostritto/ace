@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MD_HPP
-#define MD_HPP
+#ifndef JOB_HPP
+#define JOB_HPP
 
 //c++
 #include <iostream>
@@ -15,10 +15,11 @@ public:
 		SP,
 		MD,
 		MIN,
-		UNKNOWN
+		NUMDIFF,
+		NONE
 	};
 	//constructor
-	Job():t_(Type::UNKNOWN){}
+	Job():t_(Type::NONE){}
 	Job(Type t):t_(t){}
 	//operators
 	friend std::ostream& operator<<(std::ostream& out, const Job& sys);
