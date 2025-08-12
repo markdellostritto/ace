@@ -89,6 +89,7 @@ public:
 	//==== member functions ====
     virtual void resize(int ntypes){ntypes_=ntypes;}
 	virtual void init(){}
+	virtual void init(const Structure& struc){}
 	void read(Token& token);
 	virtual void coeff(Token& token){}
 	virtual double energy(Structure& struc, const NeighborList& nlist){}

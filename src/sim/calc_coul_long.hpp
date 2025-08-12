@@ -41,6 +41,7 @@ public:
 	//==== member functions ====
     void resize(int ntypes){}
 	void init();
+	void init(const Structure& struc);
 	void read(Token& token);
 	void coeff(Token& token){}
 	double energy(Structure& struc, const NeighborList& nlist);

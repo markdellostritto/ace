@@ -11,6 +11,10 @@ using math::constants::RadPI;
 using math::constants::ZERO;
 using math::special::fmexp;
 
+//==== constants ====
+
+const double CalcCGemLong::repRad_=0.05;
+
 //==== contructors/destructors ====
 
 CalcCGemLong::CalcCGemLong():Calculator(Calculator::Name::CGEM_LONG){
@@ -115,15 +119,19 @@ void CalcCGemLong::coeff(Token& token){
 	aRep_(type,type)=aRep;
 }
 
+void CalcCGemLong::init(const Structure& struc){
+	coul_.init(struc);
+}
+
 double CalcCGemLong::energy(Structure& struc, const NeighborList& nlist){
     if(CALC_CGEM_LONG_PRINT_FUNC>0) std::cout<<"CalcCGemLong::energy(const Structure&,const NeighborList&):\n";
+    const double ke=units::Consts::ke()*eps_;
     // k-space
-	coul_.init(struc);
+	//coul_.init(struc);
 	const double energyK=coul_.energy(struc);
 	const double a=coul_.alpha();
     // r-space
-    const double eps0=units::Consts::eps0();
-	const double pe=1.0/(2.0*0.05*0.05);
+    const double cRep=1.0/(2.0*repRad_*repRad_);
     double energyR=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const int ti=struc.type(i);
@@ -141,15 +149,15 @@ double CalcCGemLong::energy(Structure& struc, const NeighborList& nlist){
                 // Coulomb
 				double eCoul=0.0;
                 if(dr>ZERO){
-					const double pf=1.0/(4.0*PI*eps0)*qi*qj/dr;
+					const double pf=ke*qi*qj/dr;
                 	const double ferfg=std::erf(rmuC_(ti,tj)*dr);
                     const double ferfp=std::erf(a*dr);
                     eCoul=pf*(ferfg-ferfp);
-				} else eCoul=1.0/(4.0*PI*eps0)*qi*qj*2.0/RadPI*(rmuC_(ti,tj)-a);
+				} else eCoul=ke*qi*qj*2.0/RadPI*(rmuC_(ti,tj)-a);
                 // overlap
                 const double eOver=aOver_(ti,tj)*zi*zj*fmexp(-muS_(ti,tj)*dr2);
 				// repulsion
-				const double eRep=aRep_(ti,tj)*fmexp(-pe*dr);
+				const double eRep=aRep_(ti,tj)*fmexp(-cRep*dr);
 				//compute energy
 				energyR+=eCoul+eOver+eRep;
 			}
@@ -163,13 +171,13 @@ double CalcCGemLong::energy(Structure& struc, const NeighborList& nlist){
 
 double CalcCGemLong::compute(Structure& struc, const NeighborList& nlist){
     if(CALC_CGEM_LONG_PRINT_FUNC>0) std::cout<<"CalcCGemLong::compute(const Structure&,const NeighborList&):\n";
+	const double ke=units::Consts::ke()*eps_;
     // k-space
-    coul_.init(struc);
+    //coul_.init(struc);
     const double energyK=coul_.compute(struc);
     const double a=coul_.alpha();
     // r-space
-    const double eps0=units::Consts::eps0();
-	const double pe=1.0/(2.0*0.05*0.05);
+    const double cRep=1.0/(2.0*repRad_*repRad_);
     double energyR=0;
 	double energyCoul=0;
 	double energyOver=0;
@@ -191,24 +199,24 @@ double CalcCGemLong::compute(Structure& struc, const NeighborList& nlist){
 				double eCoul=0.0;
                 double fCoul=0.0;
 				if(dr>ZERO){
-					const double pf=1.0/(4.0*PI*eps0)*qi*qj/dr;
+					const double pf=ke*qi*qj/dr;
                 	const double ferfg=std::erf(rmuC_(ti,tj)*dr);
                     const double ferfp=std::erf(a*dr);
                     eCoul=pf*(ferfg-ferfp);
                     fCoul=pf/dr2*(
                         (ferfg-ferfp)
                         +2.0/RadPI*dr*(
-                            -rmuC_(ti,tj)*std::exp(-muC_(ti,tj)*dr2)
-                            +a*std::exp(-a*a*dr2)
+                            -rmuC_(ti,tj)*fmexp(-muC_(ti,tj)*dr2)
+                            +a*fmexp(-a*a*dr2)
                         )
                     );
-				} else eCoul=1.0/(4.0*PI*eps0)*qi*qj*2.0/RadPI*(rmuC_(ti,tj)-a);
+				} else eCoul=ke*qi*qj*2.0/RadPI*(rmuC_(ti,tj)-a);
 				// overlap
                 const double eOver=aOver_(ti,tj)*zi*zj*fmexp(-muS_(ti,tj)*dr2);
 				const double fOver=2.0*muS_(ti,tj)*eOver;
 				// repulsion
-				const double eRep=aRep_(ti,tj)*fmexp(-pe*dr);
-				const double fRep=pe*eRep;
+				const double eRep=aRep_(ti,tj)*fmexp(-cRep*dr);
+				const double fRep=cRep*eRep;
 				//compute energy
 				energyR+=eCoul+eOver+eRep;
 				energyCoul+=eCoul;
@@ -289,7 +297,7 @@ namespace serialize{
 		if(CALC_CGEM_LONG_PRINT_FUNC>0) std::cout<<"unpack(CalcCGemLong&,const char*):\n";
 		int pos=0,nt=0;
 		pos+=unpack(static_cast<Calculator&>(obj),arr+pos);
-		if(obj.name()!=Calculator::Name::CGEM_CUT) throw std::invalid_argument("serialize::unpack(CalcCGemLong&,const char*): Invalid name.");
+		if(obj.name()!=Calculator::Name::CGEM_LONG) throw std::invalid_argument("serialize::unpack(CalcCGemLong&,const char*): Invalid name.");
 		std::memcpy(&nt,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
 		std::memcpy(&obj.lambdaC(),arr+pos,sizeof(double)); pos+=sizeof(double);//lambdaC_
         std::memcpy(&obj.lambdaS(),arr+pos,sizeof(double)); pos+=sizeof(double);//lambdaS_

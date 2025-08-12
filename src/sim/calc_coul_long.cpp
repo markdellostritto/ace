@@ -47,10 +47,14 @@ void CalcCoulLong::init(){
 	coul_.rc()=rc_;
 }
 
+void CalcCoulLong::init(const Structure& struc){
+	coul_.init(struc);
+}
+
 double CalcCoulLong::energy(Structure& struc, const NeighborList& nlist){
 	const double ke=units::Consts::ke()*eps_;
 	// k-space
-	coul_.init(struc);
+	//coul_.init(struc);
 	const double energyK=coul_.energy(struc);
 	const double a=coul_.alpha();
 	// r-space
@@ -83,7 +87,7 @@ double CalcCoulLong::energy(Structure& struc, const NeighborList& nlist){
 double CalcCoulLong::compute(Structure& struc, const NeighborList& nlist){
 	const double ke=units::Consts::ke()*eps_;
 	// k-space
-	coul_.init(struc);
+	//coul_.init(struc);
 	const double energyK=coul_.compute(struc);
 	const double a=coul_.alpha();
 	// r-space

@@ -18,6 +18,7 @@
 
 class CalcCGemLong: public Calculator{
 private:
+	static const double repRad_;//repulsive radius
     double eps_;
 	double prec_;
     double lambdaC_;//radial scaling factor - Coulomb
@@ -66,6 +67,7 @@ public:
     //==== member functions ====
     void resize(int ntypes);
 	void init();
+	void init(const Structure& struc);
 	void read(Token& token);
 	void coeff(Token& token);
 	double energy(Structure& struc, const NeighborList& nlist);
