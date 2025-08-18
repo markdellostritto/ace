@@ -75,6 +75,7 @@ public:
 	//==== virtual functions ====
 	virtual void read(Token& token);
 	virtual void compute(Structure& struc, Engine& engine)=0;
+	virtual void compute(Structure& struc, Engine& engine, const NeighborList& nlist)=0;
 	virtual std::ostream& print(std::ostream& out)const{}
 	
 	//==== static functions ====
@@ -101,6 +102,7 @@ public:
 	//==== member functions ====
 	void read(Token& token);
 	void compute(Structure& struc, Engine& engine);
+	void compute(Structure& struc, Engine& engine, const NeighborList& nlist);
 	std::ostream& print(std::ostream& out)const;	
 };
 
@@ -152,6 +154,7 @@ public:
 	//==== member functions ====
 	void read(Token& token);
 	void compute(Structure& struc, Engine& engine);
+	void compute(Structure& struc, Engine& engine, const NeighborList& nlist);
 	std::ostream& print(std::ostream& out)const;	
 };
 
@@ -174,6 +177,7 @@ public:
 	//==== member functions ====
 	void read(Token& token);
 	void compute(Structure& struc, Engine& engine);
+	void compute(Structure& struc, Engine& engine, const NeighborList& nlist);
 	std::ostream& print(std::ostream& out)const;	
 };
 
@@ -193,6 +197,7 @@ public:
 	//==== member functions ====
 	void read(Token& token);
 	void compute(Structure& struc, Engine& engine);
+	void compute(Structure& struc, Engine& engine, const NeighborList& nlist);
 	std::ostream& print(std::ostream& out)const;	
 };
 
@@ -221,6 +226,7 @@ public:
 	//==== member functions ====
 	void read(Token& token);
 	void compute(Structure& struc, Engine& engine);
+	void compute(Structure& struc, Engine& engine, const NeighborList& nlist);
 	std::ostream& print(std::ostream& out)const;	
 };
 
@@ -249,6 +255,7 @@ public:
 	//==== member functions ====
 	void read(Token& token);
 	void compute(Structure& struc, Engine& engine);
+	void compute(Structure& struc, Engine& engine, const NeighborList& nlist);
 	std::ostream& print(std::ostream& out)const;	
 };
 
@@ -277,6 +284,7 @@ public:
 	//==== member functions ====
 	void read(Token& token);
 	void compute(Structure& struc, Engine& engine);
+	void compute(Structure& struc, Engine& engine, const NeighborList& nlist);
 	std::ostream& print(std::ostream& out)const;	
 };
 

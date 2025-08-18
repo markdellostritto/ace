@@ -19,3 +19,10 @@ double ConstraintFreeze::compute(Structure& struc, const NeighborList& nlist){
     }
     return 0.0;
 }
+
+double ConstraintFreeze::compute(Structure& struc){
+    for(int i=0; i<indices_.size(); ++i){
+        struc.force(indices_[i]).setZero();
+    }
+    return 0.0;
+}

@@ -24,8 +24,7 @@ private:
 	int stride_;
 	int ntypes_;
 	double rcmax_;
-    NeighborList nlist_;
-	std::vector<std::shared_ptr<Calculator> > calcs_;//calculators
+    std::vector<std::shared_ptr<Calculator> > calcs_;//calculators
 	std::vector<std::shared_ptr<Constraint> > constraints_;//constraints
 public:
 	//==== constructors/destructors ====
@@ -41,8 +40,6 @@ public:
 	const int& stride()const{return stride_;}
 	const int ntypes()const{return ntypes_;}
 	const double& rcmax()const{return rcmax_;}
-	NeighborList& nlist(){return nlist_;}
-	const NeighborList& nlist()const{return nlist_;}
 	//caclulators
 	std::vector<std::shared_ptr<Calculator> >& calcs(){return calcs_;}
 	const std::vector<std::shared_ptr<Calculator> >& calcs()const{return calcs_;}
@@ -64,7 +61,9 @@ public:
 	void init(const Structure& struc);
 	//energy/forces
 	double energy(Structure& struc);
+	double energy(Structure& struc, const NeighborList& nlist);
 	double compute(Structure& struc);
+	double compute(Structure& struc, const NeighborList& nlist);
 	
 	//==== static functions ====
 	static double ke(const Structure& struc);

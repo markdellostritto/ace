@@ -18,6 +18,7 @@ public:
 	//==== member functions ====
     void read(Token& token);
     double compute(Structure& struc, const NeighborList& nlist);
+    double compute(Structure& struc);
 };
 
 #endif

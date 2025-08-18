@@ -53,6 +53,7 @@ public:
     //==== member functions ====
 	void read(Token& token);
     virtual double compute(Structure& struc, const NeighborList& nlist){return 0.0;}
+	virtual double compute(Structure& struc){return 0.0;}
 };
 
 #endif

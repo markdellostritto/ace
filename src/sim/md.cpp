@@ -232,6 +232,7 @@ int main(int argc, char* argv[]){
 		std::cout<<"initializing the engine\n";
 		if(intg!=NULL) struc.dt()=intg->dt();
 		engine.init();
+		NeighborList nlist(engine.rcmax());
 		std::cout<<engine<<"\n";
 		
 		//==== close parameter file ==== 
@@ -244,10 +245,10 @@ int main(int argc, char* argv[]){
 			case Job::SP:{
 				std::cout<<"JOB - SP\n";
 				std::cout<<"building nlist\n";
-				engine.nlist().build(struc);
+				nlist.build(struc);
 				std::cout<<"computing energy\n";
 				engine.init(struc);
-				const double energy=engine.compute(struc);
+				const double energy=engine.compute(struc,nlist);
 				printf("energy = %.10f\n",energy);
 				XYZ::write("out.xyz",atom,struc);
 			}break;
@@ -259,9 +260,9 @@ int main(int argc, char* argv[]){
 				engine.init(struc);
 				for(int t=0; t<nstep; ++t){
 					struc.t()=t;
-					if(t%engine.stride()==0) engine.nlist().build(struc);
+					if(t%engine.stride()==0) nlist.build(struc);
 					//step
-					intg->compute(struc,engine);
+					intg->compute(struc,engine,nlist);
 					//print
 					if(t%nprint==0) printf("%i %4.5f %4.5f %4.5f %4.5f\n",t,struc.temp(),struc.ke(),struc.pe(),struc.ke()+struc.pe());
 					//write
@@ -277,9 +278,9 @@ int main(int argc, char* argv[]){
 				engine.init(struc);
 				for(int t=0; t<nstep; ++t){
 					struc.t()=t;
-					if(t%engine.stride()==0) engine.nlist().build(struc);
+					if(t%engine.stride()==0) nlist.build(struc);
 					//step
-					intg->compute(struc,engine);
+					intg->compute(struc,engine,nlist);
 					//print
 					if(t%nprint==0) printf("%i %4.5f %4.5f %4.5f %4.5f\n",t,struc.temp(),struc.ke(),struc.pe(),struc.ke()+struc.pe());
 					//write
@@ -306,14 +307,16 @@ int main(int argc, char* argv[]){
 				Engine engineP=engine;
 				Engine engineM=engine;
 				Engine engineA=engine;
-				engine.init(struc);
 				engineP.init(strucP);
 				engineM.init(strucM);
 				engineA.init(strucA);
+				NeighborList nlistP(engine.rcmax());
+				NeighborList nlistM(engine.rcmax());
+				NeighborList nlistA(engine.rcmax());
 				//compute force - analytical
 				std::cout<<"computing force - analytical\n";
-				engineA.nlist().build(strucA);
-				engineA.compute(strucA);
+				nlistA.build(strucA);
+				engineA.compute(strucA,nlistA);
 				//compute force - numerical
 				std::cout<<"computing force - numerical\n";
 				for(int n=0; n<struc.nAtoms(); ++n){
@@ -329,11 +332,11 @@ int main(int argc, char* argv[]){
 						strucP.posn(n)=struc.posn(n); strucP.posn(n)[i]+=eps;
 						strucM.posn(n)=struc.posn(n); strucM.posn(n)[i]-=eps;
 						//compute energy - plus
-						engineP.nlist().build(strucP);
-						const double energyP=engineP.energy(strucP);
+						nlistP.build(strucP);
+						const double energyP=engineP.energy(strucP,nlistP);
 						//compute energy - minus
-						engineM.nlist().build(strucM);
-						const double energyM=engineM.energy(strucM);
+						nlistM.build(strucP);
+						const double energyM=engineM.energy(strucM,nlistM);
 						//compute force
 						struc.force(n)[i]=-0.5*(energyP-energyM)/eps;
 					}
@@ -354,7 +357,7 @@ int main(int argc, char* argv[]){
 				}
 				//print error
 				std::cout<<"error - numdiff = "<<error<<"\n";
-			}
+			}break;
 			default:{
 				std::cout<<"WARNING: Invalid job.";
 			}break;

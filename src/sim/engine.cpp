@@ -27,7 +27,6 @@ std::ostream& operator<<(std::ostream& out, const Engine& engine){
 	out<<print::title("ENGINE",str)<<"\n";
 	out<<"ntypes = "<<engine.ntypes()<<"\n";
 	out<<"rcmax  = "<<engine.rcmax()<<"\n";
-	out<<"nlist  = "<<engine.nlist()<<"\n";
 	out<<"calculators = \n";
 	for(int i=0; i<engine.calcs().size(); ++i){
 		out<<engine.calc(i)<<"\n";
@@ -49,7 +48,6 @@ void Engine::clear(){
 	if(ENGINE_PRINT_FUNC>0) std::cout<<"Engine::clear():\n";
 	ntypes_=-1;
 	rcmax_=0;
-	nlist_.clear();
 	calcs_.clear();
 	constraints_.clear();
 }
@@ -71,7 +69,6 @@ void Engine::init(){
 		calcs_[i]->init();
 	}
 	if(rcmax_==0) throw std::invalid_argument("Engine::init(): Invalid max cutoff.\n");
-	nlist_=NeighborList(rcmax_);
 }
 
 void Engine::init(const Structure& struc){
@@ -83,30 +80,66 @@ void Engine::init(const Structure& struc){
 //** energy/forces **
 
 double Engine::energy(Structure& struc){
-	if(ENGINE_PRINT_FUNC>0) std::cout<<"Engine::energy(const Structure&):\n";
+	if(ENGINE_PRINT_FUNC>0) std::cout<<"Engine::energy(Structure&):\n";
 	double energy=0;
+	//reset energy
+	struc.pe()=0;
 	//compute energy
 	for(int i=0; i<calcs_.size(); ++i){
-		energy+=calcs_[i]->energy(struc,nlist_);
+		energy+=calcs_[i]->energy(struc);
+	}
+	//return energy
+	return energy;
+}
+
+double Engine::energy(Structure& struc, const NeighborList& nlist){
+	if(ENGINE_PRINT_FUNC>0) std::cout<<"Engine::energy(Structure&,const NeighborList&):\n";
+	double energy=0;
+	//reset energy
+	struc.pe()=0;
+	//compute energy
+	for(int i=0; i<calcs_.size(); ++i){
+		energy+=calcs_[i]->energy(struc,nlist);
 	}
 	//return energy
 	return energy;
 }
 
 double Engine::compute(Structure& struc){
-	if(ENGINE_PRINT_FUNC>0) std::cout<<"Engine::compute(const Structure&):\n";
+	if(ENGINE_PRINT_FUNC>0) std::cout<<"Engine::compute(Structure&):\n";
 	double energy=0;
-	//reset forces
+	//reset energy/forces
+	struc.pe()=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		struc.force(i).setZero();
 	}
 	//compute energy/forces
 	for(int i=0; i<calcs_.size(); ++i){
-		energy+=calcs_[i]->compute(struc,nlist_);
+		energy+=calcs_[i]->compute(struc);
 	}
 	//compute constraints
 	for(int i=0; i<constraints_.size(); ++i){
-		constraints_[i]->compute(struc,nlist_);
+		constraints_[i]->compute(struc);
+	}
+	//return energy
+	return energy;
+}
+
+double Engine::compute(Structure& struc, const NeighborList& nlist){
+	if(ENGINE_PRINT_FUNC>0) std::cout<<"Engine::compute(Structure&,const NeighborList&):\n";
+	double energy=0;
+	//reset energy/forces
+	struc.pe()=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.force(i).setZero();
+	}
+	//compute energy/forces
+	for(int i=0; i<calcs_.size(); ++i){
+		energy+=calcs_[i]->compute(struc,nlist);
+	}
+	//compute constraints
+	for(int i=0; i<constraints_.size(); ++i){
+		constraints_[i]->compute(struc,nlist);
 	}
 	//return energy
 	return energy;
@@ -142,7 +175,6 @@ namespace serialize{
 		int size=0;
 		size+=sizeof(int);//stride_
 		size+=sizeof(int);//ntypes_
-		size+=nbytes(obj.nlist());
 		size+=sizeof(int);//ncalcs
 		/*for(int i=0; i<obj.calcs().size(); ++i){
 			size+=sizeof(int);//name_
@@ -168,7 +200,6 @@ namespace serialize{
 		const int ntypes=obj.ntypes();
 		std::memcpy(arr+pos,&stride,sizeof(int)); pos+=sizeof(int);//nstride_
 		std::memcpy(arr+pos,&ntypes,sizeof(int)); pos+=sizeof(int);//ntypes_
-		pos+=pack(obj.nlist(),arr+pos);
 		int ncalcs=obj.calcs().size();
 		std::memcpy(arr+pos,&ncalcs,sizeof(int)); pos+=sizeof(int);//job_
 		/*for(int i=0; i<obj.calcs().size(); ++i){
@@ -197,7 +228,6 @@ namespace serialize{
 		std::memcpy(&ntypes,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
 		obj.resize(ntypes);
 		obj.stride()=stride;
-		pos+=unpack(obj.nlist(),arr+pos);
 		int ncalcs=0;
 		std::memcpy(&ncalcs,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
 		/*obj.calcs().resize(ncalcs);

@@ -184,6 +184,37 @@ void Quickmin::compute(Structure& struc, Engine& engine){
 	++struc.t();
 }
 
+void Quickmin::compute(Structure& struc, Engine& engine, const NeighborList& nlist){
+	//compute force
+	for(int i=0; i<struc.nAtoms(); ++i) struc.force(i).setZero();
+	struc.pe()=engine.compute(struc,nlist);
+	//project velocity along force
+	for(int i=0; i<struc.nAtoms(); ++i){
+		//project velocity along force
+		Eigen::Vector3d fhat=Eigen::Vector3d::Zero();
+		const double fnorm=struc.force(i).norm();
+		if(fnorm>math::constants::ZERO) fhat=struc.force(i)/struc.force(i).norm();
+		const double vdotf=struc.vel(i).dot(fhat);
+		struc.vel(i)=fhat*vdotf;
+		if(struc.vel(i).dot(fhat)<0.0) struc.vel(i).setZero();
+		//euler step
+		Eigen::Vector3d drv=struc.vel(i)*dt_;
+		const double drn=drv.norm();
+		if(drn>dmax_) drv*=dmax_/drn;
+		struc.posn(i).noalias()+=drv;
+		struc.vel(i).noalias()+=struc.force(i)*dt_;
+	}
+	//compute KE, T
+	struc.ke()=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.ke()+=struc.mass(i)*struc.vel(i).squaredNorm();
+	}
+	struc.ke()*=0.5;
+	struc.temp()=struc.ke()*(2.0/3.0)/(struc.nAtoms()*units::Consts::kb());
+	//increment
+	++struc.t();
+}
+
 void Quickmin::read(Token& token){
 	Integrator::read(token);
 }
@@ -201,6 +232,102 @@ std::ostream& operator<<(std::ostream& out, const Quickmin& intg){
 //***********************************************************
 
 void Fire::compute(Structure& struc, Engine& engine){
+	if(struc.t()==0){
+		for(int i=0; i<struc.nAtoms(); ++i) struc.vel(i).setZero();
+		for(int i=0; i<struc.nAtoms(); ++i) struc.force(i).setZero();
+		struc.pe()=engine.compute(struc);
+		alpha_=alpha0_;
+		npos_=0;
+		nneg_=0;
+	}
+
+	//**** FIRE STEP ****
+
+	//compute P
+	double P=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		P+=struc.force(i).dot(struc.vel(i));
+	}
+	//std::cout<<"P = "<<P<<"\n";
+	if(P>0.0){
+		npos_++;
+		nneg_=0;
+		if(npos_>ndelay_){
+			dt_=std::min(dt_*fdti_,dtmax_);
+			alpha_*=falpha_;
+		}
+	} else {
+		nneg_++;
+		npos_=0;
+		//if(nneg_>nmax_) break;
+		if(struc.t()>ndelay_){
+			dt_=std::max(dt_*fdtd_,dtmin_);
+			alpha_=alpha0_;
+		}
+		for(int i=0; i<struc.nAtoms(); ++i){
+			struc.posn(i).noalias()-=0.5*dt_*struc.vel(i);
+			struc.vel(i).setZero();
+		}
+	}
+	//std::cout<<"P "<<P<<" dt "<<dt_<<" alpha "<<alpha_<<"\n";
+	
+	//**** MD STEP ****
+
+	//Velocity Verlet
+	/*
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
+		const double vnorm=struc.vel(i).norm();
+		struc.vel(i)*=(1.0-alpha_);
+		struc.vel(i).noalias()+=alpha_*vnorm*struc.force(i)/(1.0e-16+struc.force(i).norm());
+		struc.posn(i).noalias()+=struc.vel(i)*dt_;
+		struc.force(i).setZero();
+	}
+	struc.pe()=engine.compute(struc);
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
+	}
+	*/
+	
+	//Euler (explicit)
+	/*
+	for(int i=0; i<struc.nAtoms(); ++i){
+		const double vnorm=struc.vel(i).norm();
+		struc.vel(i)*=(1.0-alpha_);
+		struc.vel(i).noalias()+=alpha_*vnorm*struc.force(i)/(1.0e-16+struc.force(i).norm());
+		struc.posn(i).noalias()+=struc.vel(i)*dt_;
+		struc.vel(i).noalias()+=dt_*struc.force(i)/struc.mass(i);
+		struc.force(i).setZero();
+	}
+	struc.pe()=engine.compute(struc);
+	*/
+
+	//Euler (semi-implicit)
+	for(int i=0; i<struc.nAtoms(); ++i){
+		const double vnorm=struc.vel(i).norm();
+		struc.vel(i).noalias()+=dt_*struc.force(i)/struc.mass(i);
+		struc.vel(i)*=(1.0-alpha_);
+		struc.vel(i).noalias()+=alpha_*vnorm*struc.force(i)/(1.0e-16+struc.force(i).norm());
+		Eigen::Vector3d drv=struc.vel(i)*dt_;
+		const double drn=drv.norm();
+		if(drn>dmax_) drv*=dmax_/drn;
+		struc.posn(i).noalias()+=drv;
+		struc.force(i).setZero();
+	}
+	struc.pe()=engine.compute(struc);
+	
+	//compute KE, T
+	struc.ke()=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.ke()+=struc.mass(i)*struc.vel(i).squaredNorm();
+	}
+	struc.ke()*=0.5;
+	struc.temp()=struc.ke()*(2.0/3.0)/(struc.nAtoms()*units::Consts::kb());
+	//increment
+	++struc.t();
+}
+
+void Fire::compute(Structure& struc, Engine& engine, const NeighborList& nlist){
 	if(struc.t()==0){
 		for(int i=0; i<struc.nAtoms(); ++i) struc.vel(i).setZero();
 		for(int i=0; i<struc.nAtoms(); ++i) struc.force(i).setZero();
@@ -379,6 +506,58 @@ void CG::compute(Structure& struc, Engine& engine){
 	++struc.t();
 }
 
+void CG::compute(Structure& struc, Engine& engine, const NeighborList& nlist){
+	if(struc.t()==0){
+		//compute the force
+		for(int i=0; i<struc.nAtoms(); ++i) struc.force(i).setZero();
+		struc.pe()=engine.compute(struc,nlist);
+		//store the force
+		f_.resize(struc.nAtoms());
+		for(int i=0; i<struc.nAtoms(); ++i){
+			f_[i]=struc.force(i);
+		}
+		//set the search direction
+		d_.resize(struc.nAtoms());
+		for(int i=0; i<struc.nAtoms(); ++i){
+			d_[i]=struc.force(i);
+			const double norm=d_[i].norm();
+			if(norm>ZERO) d_[i]/=norm;
+		}
+	}
+
+	//compute new position
+	std::vector<double> alpha(struc.nAtoms(),0.0);
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.posn(i).noalias()+=dt_*d_[i];
+	}
+	
+	//store force
+	for(int i=0; i<struc.nAtoms(); ++i){
+		f_[i]=struc.force(i);
+	}
+	//compute the force
+	for(int i=0; i<struc.nAtoms(); ++i) struc.force(i).setZero();
+	struc.pe()=engine.compute(struc);
+
+	//compute new direction
+	for(int i=0; i<struc.nAtoms(); ++i){
+		const double fnorm=f_[i].squaredNorm();
+		if(fnorm>0) d_[i]*=struc.force(i).dot(struc.force(i)-f_[i])/fnorm;
+		else d_[i]*=0;
+		d_[i].noalias()+=struc.force(i);
+	}
+	
+	//compute KE, T
+	struc.ke()=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.ke()+=struc.mass(i)*struc.vel(i).squaredNorm();
+	}
+	struc.ke()*=0.5;
+	struc.temp()=struc.ke()*(2.0/3.0)/(struc.nAtoms()*units::Consts::kb());
+	//increment
+	++struc.t();
+}
+
 void CG::read(Token& token){
 	Integrator::read(token);
 }
@@ -420,6 +599,31 @@ void Verlet::compute(Structure& struc, Engine& engine){
 	++struc.t();
 }
 
+void Verlet::compute(Structure& struc, Engine& engine, const NeighborList& nlist){
+	if(INTEGRATOR_PRINT_FUNC>0) std::cout<<"Verlet::compute(Structure&,Engine&):\n";
+	//first half-step
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
+		struc.posn(i).noalias()+=struc.vel(i)*dt_;
+		Cell::returnToCell(struc.posn(i),struc.posn(i),struc.R(),struc.RInv());
+	}
+	//compute force
+	struc.pe()=engine.compute(struc,nlist);
+	//second half-step
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
+	}
+	//compute KE, T
+	struc.ke()=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.ke()+=struc.mass(i)*struc.vel(i).squaredNorm();
+	}
+	struc.ke()*=0.5;
+	struc.temp()=struc.ke()*(2.0/3.0)/(struc.nAtoms()*units::Consts::kb());
+	//increment
+	++struc.t();
+}
+
 void Verlet::read(Token& token){
 	Integrator::read(token);
 }
@@ -445,6 +649,44 @@ void VScale::compute(Structure& struc, Engine& engine){
 	}
 	//compute force
 	struc.pe()=engine.compute(struc);
+	//second half-step
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
+	}
+	//compute KE, T
+	struc.ke()=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.ke()+=struc.mass(i)*struc.vel(i).squaredNorm();
+	}
+	struc.ke()*=0.5;
+	struc.temp()=struc.ke()*(2.0/3.0)/(struc.nAtoms()*units::Consts::kb());
+	//alter velocities
+	if(struc.t()%tau_==0){
+		const double fac=sqrt(T_/(struc.temp()+1e-6));
+		for(int i=0; i<struc.nAtoms(); ++i){
+			struc.vel(i)*=fac;
+		}
+	}
+	//compute KE, T
+	struc.ke()=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.ke()+=struc.mass(i)*struc.vel(i).squaredNorm();
+	}
+	struc.ke()*=0.5;
+	struc.temp()=struc.ke()*(2.0/3.0)/(struc.nAtoms()*units::Consts::kb());
+	//increment
+	++struc.t();
+}
+
+void VScale::compute(Structure& struc, Engine& engine, const NeighborList& nlist){
+	//first half-step
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
+		struc.posn(i).noalias()+=struc.vel(i)*dt_;
+		Cell::returnToCell(struc.posn(i),struc.posn(i),struc.R(),struc.RInv());
+	}
+	//compute force
+	struc.pe()=engine.compute(struc,nlist);
 	//second half-step
 	for(int i=0; i<struc.nAtoms(); ++i){
 		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
@@ -531,6 +773,45 @@ void Berendsen::compute(Structure& struc, Engine& engine){
 	++struc.t();
 }
 
+void Berendsen::compute(Structure& struc, Engine& engine, const NeighborList& nlist){
+	//first half-step
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
+		struc.posn(i).noalias()+=struc.vel(i)*dt_;
+		Cell::returnToCell(struc.posn(i),struc.posn(i),struc.R(),struc.RInv());
+	}
+	//compute force
+	struc.pe()=engine.compute(struc,nlist);
+	//second half-step
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
+	}
+	//compute KE, T
+	struc.ke()=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.ke()+=struc.mass(i)*struc.vel(i).squaredNorm();
+	}
+	struc.ke()*=0.5;
+	struc.temp()=struc.ke()*(2.0/3.0)/(struc.nAtoms()*units::Consts::kb());
+	//alter velocities
+	const double T=struc.temp();
+	const double t=struc.t();
+	const double dt=struc.dt();
+	const double fac=sqrt(1.0+dt/tau_*(T_/(T*(t-0.5*dt))-1.0));
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.vel(i)*=fac;
+	}
+	//compute KE, T
+	struc.ke()=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.ke()+=struc.mass(i)*struc.vel(i).squaredNorm();
+	}
+	struc.ke()*=0.5;
+	struc.temp()=struc.ke()*(2.0/3.0)/(struc.nAtoms()*units::Consts::kb());
+	//increment
+	++struc.t();
+}
+
 void Berendsen::read(Token& token){
 	Integrator::read(token);
 	T_=std::atof(token.next().c_str());
@@ -558,6 +839,39 @@ void Langevin::compute(Structure& struc, Engine& engine){
 	}
 	//compute force
 	struc.pe()=engine.compute(struc);
+	//add damping and random forces
+	const double c=sqrt((T_*units::Consts::kb())/(dt_*gamma_));
+	for(int i=0; i<struc.nAtoms(); ++i){
+		//damping force
+		struc.force(i).noalias()-=struc.mass(i)/gamma_*struc.vel(i);
+		//random force
+		const Eigen::Vector3d rv=Eigen::Vector3d::Random();
+		struc.force(i).noalias()+=c*sqrt(struc.mass(i))*rv/rv.norm();
+	}
+	//second half-step
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
+	}
+	//compute KE, T
+	struc.ke()=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.ke()+=struc.mass(i)*struc.vel(i).squaredNorm();
+	}
+	struc.ke()*=0.5;
+	struc.temp()=struc.ke()*(2.0/3.0)/(struc.nAtoms()*units::Consts::kb());
+	//increment
+	++struc.t();
+}
+
+void Langevin::compute(Structure& struc, Engine& engine, const NeighborList& nlist){
+	//first half-step
+	for(int i=0; i<struc.nAtoms(); ++i){
+		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
+		struc.posn(i).noalias()+=struc.vel(i)*dt_;
+		Cell::returnToCell(struc.posn(i),struc.posn(i),struc.R(),struc.RInv());
+	}
+	//compute force
+	struc.pe()=engine.compute(struc,nlist);
 	//add damping and random forces
 	const double c=sqrt((T_*units::Consts::kb())/(dt_*gamma_));
 	for(int i=0; i<struc.nAtoms(); ++i){
