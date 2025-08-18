@@ -94,8 +94,8 @@ void CalcCGemmLong::init(){
                     else aRep_(i,j) = 2.0*(aRep_(i,i)*aRep_(j,j))/(aRep_(i,i)+aRep_(j,j));
                 break;
             }
-			gammaS_(i,j) = alphaS[i]*alphaS[j]/(alphaS[i]+alphaS[j]);
-            gammaC_(i,j) = alphaC[i]*alphaC[j]/(alphaC[i]+alphaC[j]);
+			gammaS_(i,j) = 2.0*alphaS[i]*alphaS[j]/(alphaS[i]+alphaS[j]);
+            gammaC_(i,j) = 2.0*alphaC[i]*alphaC[j]/(alphaC[i]+alphaC[j]);
             rgammaC_(i,j) = std::sqrt(0.5*gammaC_(i,j));
 		}
 	}
@@ -160,8 +160,7 @@ double CalcCGemmLong::energy(Structure& struc, const NeighborList& nlist){
 			const int tj=struc.type(jj);
             const double qj=struc.charge(jj);
             const double zj=std::fabs(qj);
-			const Eigen::Vector3d disp=struc.posn(i)-(struc.posn(jj)+struc.R()*nlist.img(i,j));
-            const double dr2=disp.squaredNorm();
+			const double dr2=(struc.posn(i)-(struc.posn(jj)+struc.R()*nlist.img(i,j))).squaredNorm();
 			if(dr2<rc2_){
 				const double dr=sqrt(dr2);
                 // Coulomb
@@ -209,8 +208,8 @@ double CalcCGemmLong::compute(Structure& struc, const NeighborList& nlist){
 			const int tj=struc.type(jj);
             const double qj=struc.charge(jj);
             const double zj=std::fabs(qj);
-			const Eigen::Vector3d disp=struc.posn(i)-(struc.posn(jj)+struc.R()*nlist.img(i,j));
-            const double dr2=disp.squaredNorm();
+			const Eigen::Vector3d drv=struc.posn(i)-(struc.posn(jj)+struc.R()*nlist.img(i,j));
+            const double dr2=drv.squaredNorm();
 			if(dr2<rc2_){
 				const double dr=sqrt(dr2);
                 // Coulomb
@@ -241,7 +240,7 @@ double CalcCGemmLong::compute(Structure& struc, const NeighborList& nlist){
 				energyOver+=eOver;
 				energyRep+=eRep;
                 //compute force
-				struc.force(i).noalias()+=(fCoul+fOver+fRep)*disp;
+				struc.force(i).noalias()+=(fCoul+fOver+fRep)*drv;
 			}
 		}
 	}
@@ -313,7 +312,7 @@ namespace serialize{
 		if(CALC_CGEMM_LONG_PRINT_FUNC>0) std::cout<<"unpack(CalcCGemmLong&,const char*):\n";
 		int pos=0,nt=0;
 		pos+=unpack(static_cast<Calculator&>(obj),arr+pos);
-		if(obj.name()!=Calculator::Name::CGEM_LONG) throw std::invalid_argument("serialize::unpack(CalcCGemmLong&,const char*): Invalid name.");
+		if(obj.name()!=Calculator::Name::CGEMM_LONG) throw std::invalid_argument("serialize::unpack(CalcCGemmLong&,const char*): Invalid name.");
         std::memcpy(&obj.mix(),arr+pos,sizeof(obj.mix())); pos+=sizeof(obj.mix());//mix_
 		std::memcpy(&nt,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
 		std::memcpy(&obj.lambdaC(),arr+pos,sizeof(double)); pos+=sizeof(double);//lambdaC_

@@ -71,6 +71,8 @@ public:
 	const Eigen::MatrixXd& gammaC()const{return gammaC_;}
 	Eigen::MatrixXd& gammaS(){return gammaS_;}
 	const Eigen::MatrixXd& gammaS()const{return gammaS_;}
+	Eigen::MatrixXd& rgammaC(){return rgammaC_;}
+	const Eigen::MatrixXd& rgammaC()const{return rgammaC_;}
 	
     //==== member functions ====
     void resize(int ntypes);
