@@ -2485,7 +2485,7 @@ int main(int argc, char* argv[]){
 					const double eCGem=eCoul-eZero;
 					strucs_org[n][i].ecoul()=eCGem;
 					strucs_org[n][i].pe()-=eCGem;
-					std::cout<<"t = "<<t<<" ftot = "<<ftot<<" ezero "<<eZero<<" ecoul "<<eCoul<<" ecgem "<<eCGem<<" alpha "<<eCalc.coul().alpha()<<" natoms "<<struc.nAtoms()<<"\n";
+					//std::cout<<"t = "<<t<<" ftot = "<<ftot<<" ezero "<<eZero<<" ecoul "<<eCoul<<" ecgem "<<eCGem<<" alpha "<<eCalc.coul().alpha()<<" natoms "<<struc.nAtoms()<<"\n";
 					//compute the force
 					for(int j=0; j<nCores; ++j){
 						strucs_org[n][i].force(j).noalias()-=struc.force(j);
@@ -3527,3 +3527,4 @@ int main(int argc, char* argv[]){
 	
 	return 0;
 }
+
