@@ -26,7 +26,7 @@ chem = units.o ptable.o
 str = string.o print.o token.o
 fstruc = file_struc.o vasp_struc.o xyz_struc.o cube_struc.o qe_struc.o
 mem = serialize.o map.o
-calc = calc.o calc_factory.o calc_lj_cut.o calc_coul_cut.o calc_coul_long.o calc_cgem_cut.o calc_cgem_long.o
+calc = calc.o calc_factory.o calc_lj_cut.o calc_coul_cut.o calc_coul_long.o calc_cgem_cut.o calc_cgem_long.o calc_cgemm_cut.o calc_cgemm_long.o
 opt = loss.o stop.o algo.o objective.o decay.o iter.o
 constraint = constraint.o constraint_factory.o constraint_freeze.o 
 sim = engine.o integrator.o job.o
@@ -191,6 +191,10 @@ calc_cgem_cut.o: sim/calc_cgem_cut.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_cgem_cut.cpp
 calc_cgem_long.o: sim/calc_cgem_long.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_cgem_long.cpp
+calc_cgemm_cut.o: sim/calc_cgemm_cut.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_cgemm_cut.cpp
+calc_cgemm_long.o: sim/calc_cgemm_long.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_cgemm_long.cpp
 
 # ==== constraint ====
 
@@ -234,6 +238,10 @@ md: $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(kspaces) $(calc) $(constr
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o md.exe sim/md.cpp $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(kspaces) $(calc) $(constraint) $(sim) $(util) format.o grid.o 
 fit_cgem: $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(calc) $(kspaces) $(constraint) $(sim) format.o grid.o -lnlopt
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o fit_cgem.exe sim/fit_cgem.cpp $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(calc) $(kspaces) $(constraint) $(sim) format.o grid.o -lnlopt
+fit_cgemm: $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(calc) $(kspaces) $(constraint) $(sim) format.o grid.o -lnlopt
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o fit_cgemm.exe sim/fit_cgemm.cpp $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(calc) $(kspaces) $(constraint) $(sim) format.o grid.o -lnlopt
+fit_cgemm_omp: $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(calc) $(kspaces) $(constraint) $(sim) format.o grid.o -lnlopt
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o fit_cgemm_omp.exe sim/fit_cgemm_omp.cpp $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(calc) $(kspaces) $(constraint) $(sim) format.o grid.o -lnlopt -fopenmp
 
 # ==== NEURAL NETWORK ====
 nn_fit: $(neural) $(str) $(math) $(util) $(thread) $(opt) serialize.o compiler.o nn_train.o
