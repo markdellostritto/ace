@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FIT_CGEM2_HPP
-#define FIT_CGEM2_HPP
+#ifndef FIT_CGEM_HPP
+#define FIT_CGEM_HPP
 
 // c++
 #include <iostream>

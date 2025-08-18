@@ -149,8 +149,6 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
         int t=0;
         double ftot=0;
         for(t=0; t<fData_.nsteps; ++t){
-            //build neighbor list
-            engine.nlist().build(strucN);
             //compute step
             fData_.intg->compute(strucN,engine);
             //compute total force
@@ -366,6 +364,8 @@ int main(int argc, char* argv[]){
             if(!token.end()) qtot.push_back(std::atoi(token.next().c_str()));
             else qtot.push_back(0);
         }
+        fclose(reader);
+        reader=NULL;
         
         //==== print ====
         int dim=0;
@@ -678,6 +678,6 @@ int main(int argc, char* argv[]){
 	delete[] input;
 	delete[] strbuf;
 	
-	if(error) return 1;
+    if(error) return 1;
 	else return 0;
 }
