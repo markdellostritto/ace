@@ -105,7 +105,7 @@ double Coul::energy(Structure& struc)const{
 		energy+=ka_[n]*(sfr*sfr+sfi*sfi);
 	}
 	//constant
-	energy+=econst_?q2_*vc_:0.0;
+	energy+=q2_*vc_;
 	//net charge
 	double qtot=0;
 	for(int i=0; i<natoms; ++i){
@@ -145,7 +145,7 @@ double Coul::compute(Structure& struc)const{
 		}
 	}
 	//constant term
-	energy+=econst_?q2_*vc_:0.0;
+	energy+=q2_*vc_;
 	//net charge
 	double qtot=0;
 	for(int i=0; i<natoms; ++i){
