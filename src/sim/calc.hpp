@@ -25,6 +25,8 @@ public:
 			COUL_LONG,
 			CGEM_CUT,
 			CGEM_LONG,
+			CGEMM_CUT,
+			CGEMM_LONG,
 			NONE
 		};
 		//constructor
@@ -93,7 +95,9 @@ public:
 	void read(Token& token);
 	virtual void coeff(Token& token){}
 	virtual double energy(Structure& struc, const NeighborList& nlist){}
+	virtual double energy(Structure& struc){}
 	virtual double compute(Structure& struc, const NeighborList& nlist){}
+	virtual double compute(Structure& struc){}
 };
 
 //**********************************************

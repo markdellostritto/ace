@@ -49,6 +49,24 @@ double CalcCoulCut::energy(Structure& struc, const NeighborList& nlist){
 	return energy;
 }
 
+double CalcCoulCut::energy(Structure& struc){
+    if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::energy(const Structure&):\n";
+	double energy=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		const double qi=struc.charge(i);
+		for(int j=i+1; j<struc.nAtoms(); ++j){
+			const double qj=struc.charge(j);
+			const double dr2=(struc.posn(i)-struc.posn(j)).squaredNorm();
+			if(dr2<rc2_){
+				const double dri=1.0/sqrt(dr2);
+				energy+=qi*qj*dri;
+			}
+		}
+	}
+	struc.pe()+=energy;
+	return energy;
+}
+
 double CalcCoulCut::compute(Structure& struc, const NeighborList& nlist){
     if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::compute(const Structure&,const NeighborList&):\n";
 	double energy=0;
@@ -57,17 +75,39 @@ double CalcCoulCut::compute(Structure& struc, const NeighborList& nlist){
 		for(int j=0; j<nlist.size(i); ++j){
 			const int jj=nlist.index(i,j);
             const double qj=struc.charge(jj);
-			const Eigen::Vector3d disp=struc.posn(i)-(struc.posn(jj)+struc.R()*nlist.img(i,j));
-			const double dr2=disp.squaredNorm();
+			const Eigen::Vector3d drv=struc.posn(i)-(struc.posn(jj)+struc.R()*nlist.img(i,j));
+			const double dr2=drv.squaredNorm();
 			if(dr2<rc2_){
 				const double dri=1.0/sqrt(dr2);
 				energy+=qi*qj*dri;
-				struc.force(i).noalias()+=qi*qj*dri/dr2*disp;
+				struc.force(i).noalias()+=qi*qj*dri/dr2*drv;
 			}
 		}
 	}
 	energy*=0.5;
     struc.pe()+=energy;
+	return energy;
+}
+
+double CalcCoulCut::compute(Structure& struc){
+    if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::compute(const Structure&):\n";
+	double energy=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		const double qi=struc.charge(i);
+		for(int j=i+1; j<struc.nAtoms(); ++j){
+			const double qj=struc.charge(j);
+			const Eigen::Vector3d drv=struc.posn(i)-struc.posn(j);
+			const double dr2=drv.squaredNorm();
+			if(dr2<rc2_){
+				const double dri=1.0/sqrt(dr2);
+				energy+=qi*qj*dri;
+				const Eigen::Vector3d fij=qi*qj*dri/dr2*drv;
+				struc.force(i).noalias()+=fij;
+				struc.force(j).noalias()-=fij;
+			}
+		}
+	}
+	struc.pe()+=energy;
 	return energy;
 }
 

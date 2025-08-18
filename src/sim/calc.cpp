@@ -13,6 +13,8 @@ Calculator::Name Calculator::Name::read(const char* str){
 	else if(std::strcmp(str,"COUL_LONG")==0) return Calculator::Name::COUL_LONG;
 	else if(std::strcmp(str,"CGEM_CUT")==0) return Calculator::Name::CGEM_CUT;
 	else if(std::strcmp(str,"CGEM_LONG")==0) return Calculator::Name::CGEM_LONG;
+	else if(std::strcmp(str,"CGEMM_CUT")==0) return Calculator::Name::CGEMM_CUT;
+	else if(std::strcmp(str,"CGEMM_LONG")==0) return Calculator::Name::CGEMM_LONG;
 	else return Calculator::Name::NONE;
 }
 
@@ -23,6 +25,8 @@ const char* Calculator::Name::name(const Calculator::Name& t){
 		case Calculator::Name::COUL_LONG: return "COUL_LONG";
 		case Calculator::Name::CGEM_CUT: return "CGEM_CUT";
 		case Calculator::Name::CGEM_LONG: return "CGEM_LONG";
+		case Calculator::Name::CGEMM_CUT: return "CGEMM_CUT";
+		case Calculator::Name::CGEMM_LONG: return "CGEMM_LONG";
 		default: return "NONE";
 	}
 }
@@ -34,6 +38,8 @@ std::ostream& operator<<(std::ostream& out, const Calculator::Name& t){
 		case Calculator::Name::COUL_LONG: out<<"COUL_LONG"; break;
 		case Calculator::Name::CGEM_CUT: out<<"CGEM_CUT"; break;
 		case Calculator::Name::CGEM_LONG: out<<"CGEM_LONG"; break;
+		case Calculator::Name::CGEMM_CUT: out<<"CGEMM_CUT"; break;
+		case Calculator::Name::CGEMM_LONG: out<<"CGEMM_LONG"; break;
 		default: out<<"NONE"; break;
 	}
 	return out;

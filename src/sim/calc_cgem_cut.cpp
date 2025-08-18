@@ -144,6 +144,9 @@ double CalcCGemCut::compute(Structure& struc, const NeighborList& nlist){
     const double eps0=units::Consts::eps0();
 	const double pe=1.0/(2.0*0.05*0.05);
 	double energy=0;
+	double energyCoul=0;
+	double energyOver=0;
+	double energyRep=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const int ti=struc.type(i);
         const double qi=struc.charge(i);
@@ -176,6 +179,9 @@ double CalcCGemCut::compute(Structure& struc, const NeighborList& nlist){
 				const double fRep=pe*eRep;
 				//compute energy
 				energy+=eCoul+eOver+eRep;
+                energyCoul+=eCoul;
+				energyOver+=eOver;
+				energyRep+=eRep;
                 //compute force
 				struc.force(i).noalias()+=(fCoul+fOver+fRep)*disp;
 			}
@@ -183,6 +189,7 @@ double CalcCGemCut::compute(Structure& struc, const NeighborList& nlist){
 	}
 	energy*=0.5;
     struc.pe()+=energy;
+	//std::cout<<" eCoul "<<energyCoul<<" eOver "<<energyOver<<" eRep "<<energyRep<<"\n";
 	return energy;
 }
 

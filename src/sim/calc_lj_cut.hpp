@@ -43,7 +43,9 @@ public:
 	void read(Token& token);
 	void coeff(Token& token);
 	double energy(Structure& struc, const NeighborList& nlist);
+	double energy(Structure& struc);
 	double compute(Structure& struc, const NeighborList& nlist);
+	double compute(Structure& struc);
 };
 
 //**********************************************

@@ -72,8 +72,7 @@ double CalcLJCut::energy(Structure& struc, const NeighborList& nlist){
 		for(int j=0; j<nlist.size(i); ++j){
 			const int jj=nlist.index(i,j);
 			const int tj=struc.type(jj);
-			const Eigen::Vector3d disp=struc.posn(i)-(struc.posn(jj)+struc.R()*nlist.img(i,j));
-            const double dr2=disp.squaredNorm();
+			const double dr2=(struc.posn(i)-(struc.posn(jj)+struc.R()*nlist.img(i,j))).squaredNorm();
 			if(dr2<rc2_){
 				const double du2=s_(ti,tj)*s_(ti,tj)/dr2;
 				const double du6=du2*du2*du2;
@@ -86,6 +85,25 @@ double CalcLJCut::energy(Structure& struc, const NeighborList& nlist){
 	return energy;
 }
 
+double CalcLJCut::energy(Structure& struc){
+    if(CALC_LJ_CUT_PRINT_FUNC>0) std::cout<<"CalcLJCut::energy(const Structure&):\n";
+	double energy=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		const int ti=struc.type(i);
+		for(int j=i+1; j<struc.nAtoms(); ++j){
+			const int tj=struc.type(j);
+			const double dr2=(struc.posn(i)-struc.posn(j)).squaredNorm();
+			if(dr2<rc2_){
+				const double du2=s_(ti,tj)*s_(ti,tj)/dr2;
+				const double du6=du2*du2*du2;
+				energy+=4.0*e_(ti,tj)*du6*(du6-1.0);
+			}
+		}
+	}
+	struc.pe()+=energy;
+	return energy;
+}
+
 double CalcLJCut::compute(Structure& struc, const NeighborList& nlist){
     if(CALC_LJ_CUT_PRINT_FUNC>0) std::cout<<"CalcLJCut::compute(const Structure&,const NeighborList&):\n";
 	double energy=0;
@@ -94,21 +112,45 @@ double CalcLJCut::compute(Structure& struc, const NeighborList& nlist){
 		for(int j=0; j<nlist.size(i); ++j){
 			const int jj=nlist.index(i,j);
 			const int tj=struc.type(jj);
-			const Eigen::Vector3d disp=struc.posn(i)-(struc.posn(jj)+struc.R()*nlist.img(i,j));
-            const double dr2=disp.squaredNorm();
+			const Eigen::Vector3d drv=struc.posn(i)-(struc.posn(jj)+struc.R()*nlist.img(i,j));
+            const double dr2=drv.squaredNorm();
 			if(dr2<rc2_){
 				const double dri=1.0/sqrt(dr2);
 				const double du=s_(ti,tj)*dri;
 				const double du3=du*du*du;
 				const double du6=du3*du3;
 				energy+=4.0*e_(ti,tj)*du6*(du6-1.0);
-				const Eigen::Vector3d fij=24.0*e_(ti,tj)*du6*(2.0*du6-1.0)*dri*dri*disp;
-				struc.force(i).noalias()+=fij;
+				struc.force(i).noalias()+=24.0*e_(ti,tj)*du6*(2.0*du6-1.0)*dri*dri*drv;
 			}
 		}
 	}
 	energy*=0.5;
     struc.pe()+=energy;
+	return energy;
+}
+
+double CalcLJCut::compute(Structure& struc){
+    if(CALC_LJ_CUT_PRINT_FUNC>0) std::cout<<"CalcLJCut::compute(const Structure&):\n";
+	double energy=0;
+	for(int i=0; i<struc.nAtoms(); ++i){
+		const int ti=struc.type(i);
+		for(int j=i+1; j<struc.nAtoms(); ++j){
+			const int tj=struc.type(j);
+			const Eigen::Vector3d drv=struc.posn(i)-struc.posn(j);
+            const double dr2=drv.squaredNorm();
+			if(dr2<rc2_){
+				const double dri=1.0/sqrt(dr2);
+				const double du=s_(ti,tj)*dri;
+				const double du3=du*du*du;
+				const double du6=du3*du3;
+				energy+=4.0*e_(ti,tj)*du6*(du6-1.0);
+				const Eigen::Vector3d fij=24.0*e_(ti,tj)*du6*(2.0*du6-1.0)*dri*dri*drv;
+				struc.force(i).noalias()+=fij;
+				struc.force(j).noalias()-=fij;
+			}
+		}
+	}
+	struc.pe()+=energy;
 	return energy;
 }
 
