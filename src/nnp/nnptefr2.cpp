@@ -41,7 +41,7 @@
 #include "util/time.hpp"
 // sim
 #include "sim/calc.hpp"
-#include "sim/calc_cgem_long.hpp"
+#include "sim/calc_cgemm_long.hpp"
 #include "sim/engine.hpp"
 #include "sim/integrator.hpp"
 #include "sim/constraint_freeze.hpp"
@@ -1661,21 +1661,21 @@ int main(int argc, char* argv[]){
 			bool norm=false;  //compute - energy normalization
 			bool zero=false;  //compute - zero point energy
 			bool pca=false;   //compute - pca
-			bool cgem=false;  //compute - cgem potential
+			bool cgemm=false; //compute - cgemm potential
 		} compute;
 	//flags - writing
 		struct Write{
 			bool force=false;  //write - force
 			bool energy=false; //write - energy
 			bool input=false;  //write - inputs
-			bool cgem=false;   //write - cgem potential
+			bool cgemm=false;  //write - cgemm potential
 		} write;
 	//external potentials
 		int stride=1;
 		int nsteps=0;
 		double ftol=0;
 		Shell shell;
-		CalcCGemLong calcCGemLong;
+		CalcCGemmLong calcCGemmLong;
 		std::shared_ptr<Integrator> integrator;
 	//nn potential - opt
 		int nBatch=-1;
@@ -1905,7 +1905,7 @@ int main(int argc, char* argv[]){
 					if(wtype=="FORCE") write.force=string::boolean(token.next().c_str());
 					else if(wtype=="ENERGY") write.energy=string::boolean(token.next().c_str());
 					else if(wtype=="INPUT") write.input=string::boolean(token.next().c_str());
-					else if(wtype=="CGEM") write.cgem=string::boolean(token.next().c_str());
+					else if(wtype=="CGEMM") write.cgemm=string::boolean(token.next().c_str());
 				}
 				//flags - compute
 				if(tag=="COMPUTE"){
@@ -1914,11 +1914,11 @@ int main(int argc, char* argv[]){
 					else if(ctype=="NORM") compute.norm=string::boolean(token.next().c_str());
 					else if(ctype=="ZERO") compute.zero=string::boolean(token.next().c_str());
 					else if(ctype=="PCA") compute.pca=string::boolean(token.next().c_str());
-					else if(ctype=="CGEM") compute.cgem=string::boolean(token.next().c_str());
+					else if(ctype=="CGEMM") compute.cgemm=string::boolean(token.next().c_str());
 				}
 				//potential 
-				if(tag=="CALC_CGEM"){
-					calcCGemLong.read(token);
+				if(tag=="CALC_CGEMM"){
+					calcCGemmLong.read(token);
 				} else if(tag=="SHELL"){
 					while(!token.end()){
 						const std::string stag=string::to_upper(token.next());
@@ -2013,38 +2013,38 @@ int main(int argc, char* argv[]){
 				nnpte.reset()=reset;
 			}
 
-			//======== cgem =========
-			if(compute.cgem){
+			//======== cgemm =========
+			if(compute.cgemm){
 				//set number of types
 				//number of types + shell types
 				const int nTypes=types.size()+1;
 				//set parameters
-				calcCGemLong.resize(nTypes);
+				calcCGemmLong.resize(nTypes);
 				for(int i=0; i<nTypes-1; ++i){
-					calcCGemLong.radius()[i]=types[i].radius();
-					calcCGemLong.aOver()(i,i)=types[i].amp();
-					calcCGemLong.aRep()(i,i)=0.0;
+					calcCGemmLong.radius()[i]=types[i].radius();
+					calcCGemmLong.aOver()(i,i)=types[i].amp();
+					calcCGemmLong.aRep()(i,i)=0.0;
 				}
-				calcCGemLong.radius()[nTypes-1]=shell.radius;
-				calcCGemLong.aOver()(nTypes-1,nTypes-1)=shell.amp;
-				calcCGemLong.aRep()(nTypes-1,nTypes-1)=shell.rep;
+				calcCGemmLong.radius()[nTypes-1]=shell.radius;
+				calcCGemmLong.aOver()(nTypes-1,nTypes-1)=shell.amp;
+				calcCGemmLong.aRep()(nTypes-1,nTypes-1)=shell.rep;
 				//initialize the potential
-				calcCGemLong.init();
+				calcCGemmLong.init();
 				std::cout<<"*************** CGEM LONG ***************\n";
-				std::cout<<"lambdaC = "<<calcCGemLong.lambdaC()<<"\n";
-				std::cout<<"lambdaS = "<<calcCGemLong.lambdaS()<<"\n";
-				std::cout<<"eps = "<<calcCGemLong.eps()<<"\n";
-				std::cout<<"prec = "<<calcCGemLong.prec()<<"\n";
+				std::cout<<"lambdaC = "<<calcCGemmLong.lambdaC()<<"\n";
+				std::cout<<"lambdaS = "<<calcCGemmLong.lambdaS()<<"\n";
+				std::cout<<"eps = "<<calcCGemmLong.eps()<<"\n";
+				std::cout<<"prec = "<<calcCGemmLong.prec()<<"\n";
 				std::cout<<"radius\n";
-				std::cout<<calcCGemLong.radius().transpose()<<"\n";
+				std::cout<<calcCGemmLong.radius().transpose()<<"\n";
 				std::cout<<"aOver\n";
-				std::cout<<calcCGemLong.aOver()<<"\n";
+				std::cout<<calcCGemmLong.aOver()<<"\n";
 				std::cout<<"aRep\n";
-				std::cout<<calcCGemLong.aRep()<<"\n";
-				std::cout<<"muC\n";
-				std::cout<<calcCGemLong.muC()<<"\n";
-				std::cout<<"muS\n";
-				std::cout<<calcCGemLong.muS()<<"\n";
+				std::cout<<calcCGemmLong.aRep()<<"\n";
+				std::cout<<"gammaC\n";
+				std::cout<<calcCGemmLong.gammaC()<<"\n";
+				std::cout<<"gammaS\n";
+				std::cout<<calcCGemmLong.gammaS()<<"\n";
 			}
 			
 			//======== print parameters ========
@@ -2072,18 +2072,18 @@ int main(int argc, char* argv[]){
 			std::cout<<"norm  = "<<compute.norm<<"\n";
 			std::cout<<"zero  = "<<compute.zero<<"\n";
 			std::cout<<"pca   = "<<compute.pca<<"\n";
-			std::cout<<"cgem  = "<<compute.cgem<<"\n";
+			std::cout<<"cgemm = "<<compute.cgemm<<"\n";
 			std::cout<<print::buf(strbuf)<<"\n";
 			std::cout<<print::title("WRITE FLAGS",strbuf)<<"\n";
 			std::cout<<"force  = "<<write.force<<"\n";
 			std::cout<<"energy = "<<write.energy<<"\n";
 			std::cout<<"inputs = "<<write.input<<"\n";
-			std::cout<<"cgem   = "<<write.cgem<<"\n";
+			std::cout<<"cgemm  = "<<write.cgemm<<"\n";
 			std::cout<<print::buf(strbuf)<<"\n";
 			std::cout<<print::title("EXTERNAL POTENTIAL",strbuf)<<"\n";
-			if(compute.cgem){
+			if(compute.cgemm){
 				std::cout<<"STRIDE = "<<stride<<"\n";
-				std::cout<<"CGEM   = "<<calcCGemLong<<"\n";
+				std::cout<<"CGEMN  = "<<calcCGemmLong<<"\n";
 				std::cout<<"SHELL  = "<<shell.radius<<" "<<shell.amp<<" "<<shell.rep<<"\n";
 			}
 			std::cout<<print::buf(strbuf)<<"\n";
@@ -2134,15 +2134,15 @@ int main(int argc, char* argv[]){
 		MPI_Bcast(&compute.norm,1,MPI_C_BOOL,0,WORLD.mpic());
 		MPI_Bcast(&compute.zero,1,MPI_C_BOOL,0,WORLD.mpic());
 		MPI_Bcast(&compute.pca,1,MPI_C_BOOL,0,WORLD.mpic());
-		MPI_Bcast(&compute.cgem,1,MPI_C_BOOL,0,WORLD.mpic());
+		MPI_Bcast(&compute.cgemm,1,MPI_C_BOOL,0,WORLD.mpic());
 		//flags - writing
 		MPI_Bcast(&write.force,1,MPI_C_BOOL,0,WORLD.mpic());
 		MPI_Bcast(&write.energy,1,MPI_C_BOOL,0,WORLD.mpic());
 		MPI_Bcast(&write.input,1,MPI_C_BOOL,0,WORLD.mpic());
-		MPI_Bcast(&write.cgem,1,MPI_C_BOOL,0,WORLD.mpic());
+		MPI_Bcast(&write.cgemm,1,MPI_C_BOOL,0,WORLD.mpic());
 		//external potential
-		if(compute.cgem){
-			thread::bcast(WORLD.mpic(),0,calcCGemLong);
+		if(compute.cgemm){
+			thread::bcast(WORLD.mpic(),0,calcCGemmLong);
 			MPI_Bcast(&stride,1,MPI_INT,0,WORLD.mpic());
 			MPI_Bcast(&nsteps,1,MPI_INT,0,WORLD.mpic());
 			MPI_Bcast(&ftol,1,MPI_DOUBLE,0,WORLD.mpic());
@@ -2370,12 +2370,13 @@ int main(int argc, char* argv[]){
 		//************************************************************************************
 		
 		//======== compute CGEM energies ========
-		if(compute.cgem){
-			if(WORLD.rank()==0) std::cout<<"computing CGEM energies\n";
+		if(compute.cgemm){
+			if(WORLD.rank()==0) std::cout<<"computing CGEMM energies\n";
 			//stats
 			double tavg=0;
-			double favg=0;
 			double tmax=0;
+			double favg=0;
+			double fmax=0;
 			int nstruc=0;
 			//set the atom type
 			Atom atomCGem;
@@ -2388,22 +2389,21 @@ int main(int argc, char* argv[]){
 			Engine engine;
 			engine.stride()=stride;
 			engine.calcs().push_back(
-				std::make_shared<CalcCGemLong>(calcCGemLong)
+				std::make_shared<CalcCGemmLong>(calcCGemmLong)
 			);
 			engine.constraints().push_back(
 				std::make_shared<ConstraintFreeze>()
 			);
 			engine.resize(nTypes);
 			engine.init();
+			NeighborList nlist(engine.rcmax());
 			//set parameters
-			CalcCGemLong& eCalc=static_cast<CalcCGemLong&>(*engine.calcs().front());
-			eCalc.radius()=calcCGemLong.radius();
-			eCalc.aOver()=calcCGemLong.aOver();
-			eCalc.aRep()=calcCGemLong.aRep();
-			eCalc.muC()=calcCGemLong.muC();
-			eCalc.muS()=calcCGemLong.muS();
+			CalcCGemmLong& eCalc=static_cast<CalcCGemmLong&>(*engine.calcs().front());
+			eCalc.radius()=calcCGemmLong.radius();
+			eCalc.aOver()=calcCGemmLong.aOver();
+			eCalc.aRep()=calcCGemmLong.aRep();
 			eCalc.init();
-			//compute cgem - original
+			//compute cgemm - original
 			for(int n=0; n<nData; ++n){
 				//strucs - original
 				for(int i=0; i<strucs_org[n].size(); i++){
@@ -2449,17 +2449,19 @@ int main(int argc, char* argv[]){
 					for(int j=0; j<nCores; ++j){
 						const int tc=struc.type(j);
 						const int ts=struc.type(nCores+j);
-						eZero+=units::Consts::ke()*1.0*-1.0*2.0/RadPI*(eCalc.rmuC()(tc,ts)-alpha);
-						eZero+=eCalc.aOver()(tc,ts)*1.0*1.0;
+						eZero+=units::Consts::ke()*(1.0)*(-1.0)*2.0/RadPI*(eCalc.rgammaC()(tc,ts)-alpha);
+						eZero+=eCalc.aOver()(tc,ts)*(1.0)*(1.0);
 					}
+					eZero+=0.5*units::Consts::ke()*eCalc.coul().vc()*eCalc.coul().q2();//Ewald constant term
 					//relax the shells
 					int t=0;
 					double ftot=0;
+					nlist.build(struc);
 					for(t=0; t<nsteps; ++t){
 						//build neighbor list
-						if(t%engine.stride()==0) engine.nlist().build(struc);
+						if(t%engine.stride()==0) nlist.build(struc);
 						//compute step
-						integrator->compute(struc,engine);
+						integrator->compute(struc,engine,nlist);
 						//compute total force
 						ftot=0;
 						for(int m=0; m<struc.nAtoms(); ++m){
@@ -2472,16 +2474,18 @@ int main(int argc, char* argv[]){
 					tavg+=t;
 					favg+=ftot;
 					if(t>tmax) tmax=t;
+					if(ftot>fmax) fmax=ftot;
 					nstruc++;
 					//print the structure
 					//std::cout<<struc<<"\n";
 					//for(int j=0; j<struc.nAtoms(); ++j) std::cout<<struc.name(j)<<" "<<struc.mass(j)<<" "<<struc.posn(j).transpose()<<"\n";
 					//compute the energy
-					const double eCoul=engine.compute(struc);
+					nlist.build(struc);
+					const double eCoul=engine.compute(struc,nlist);
 					const double eCGem=eCoul-eZero;
 					strucs_org[n][i].ecoul()=eCGem;
 					strucs_org[n][i].pe()-=eCGem;
-					//std::cout<<"t = "<<t<<" ftot = "<<ftot<<" ezero "<<eZero<<" ecoul "<<eCoul<<" ecgem "<<eCGem<<" alpha "<<eCalc.coul().alpha()<<" natoms "<<struc.nAtoms()<<"\n";
+					std::cout<<"t = "<<t<<" ftot = "<<ftot<<" ezero "<<eZero<<" ecoul "<<eCoul<<" ecgem "<<eCGem<<" alpha "<<eCalc.coul().alpha()<<" natoms "<<struc.nAtoms()<<"\n";
 					//compute the force
 					for(int j=0; j<nCores; ++j){
 						strucs_org[n][i].force(j).noalias()-=struc.force(j);
@@ -2491,10 +2495,12 @@ int main(int argc, char* argv[]){
 			double tavg_tot=0;
 			double tmax_tot=0;
 			double favg_tot=0;
+			double fmax_tot=0;
 			int nstruc_tot=0;
 			MPI_Reduce(&tmax,&tmax_tot,1,MPI_DOUBLE,MPI_MAX,0,WORLD.mpic());
 			MPI_Reduce(&tavg,&tavg_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
 			MPI_Reduce(&favg,&favg_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
+			MPI_Reduce(&fmax,&fmax_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
 			MPI_Reduce(&nstruc,&nstruc_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
 			if(WORLD.rank()==0){
 				tavg_tot/=nstruc_tot;
@@ -2502,6 +2508,7 @@ int main(int argc, char* argv[]){
 				std::cout<<"tavg = "<<tavg_tot<<"\n";
 				std::cout<<"tmax = "<<tmax_tot<<"\n";
 				std::cout<<"favg = "<<favg_tot<<"\n";
+				std::cout<<"fmax = "<<fmax_tot<<"\n";
 			}
 		}
 
@@ -2617,7 +2624,7 @@ int main(int argc, char* argv[]){
 		//************************************************************************************
 		
 		//======== compute CGEM energies ========
-		/*if(compute.cgem){
+		/*if(compute.cgemm){
 			if(WORLD.rank()==0) std::cout<<"computing CGEM energies\n";
 			//stats
 			double tavg=0;
@@ -2635,7 +2642,7 @@ int main(int argc, char* argv[]){
 			Engine engine;
 			engine.stride()=stride;
 			engine.calcs().push_back(
-				std::make_shared<CalcCGemLong>(calcCGemLong)
+				std::make_shared<CalcCGemmLong>(calcCGemmLong)
 			);
 			engine.constraints().push_back(
 				std::make_shared<ConstraintFreeze>()
@@ -2643,14 +2650,14 @@ int main(int argc, char* argv[]){
 			engine.resize(nTypes);
 			engine.init();
 			//set parameters
-			CalcCGemLong& eCalc=static_cast<CalcCGemLong&>(*engine.calcs().front());
-			eCalc.radius()=calcCGemLong.radius();
-			eCalc.aOver()=calcCGemLong.aOver();
-			eCalc.aRep()=calcCGemLong.aRep();
-			eCalc.muC()=calcCGemLong.muC();
-			eCalc.muS()=calcCGemLong.muS();
+			CalcCGemmLong& eCalc=static_cast<CalcCGemmLong&>(*engine.calcs().front());
+			eCalc.radius()=calcCGemmLong.radius();
+			eCalc.aOver()=calcCGemmLong.aOver();
+			eCalc.aRep()=calcCGemmLong.aRep();
+			eCalc.gammaC()=calcCGemmLong.gammaC();
+			eCalc.gammaS()=calcCGemmLong.gammaS();
 			eCalc.init();
-			//compute cgem - original
+			//compute cgemm - original
 			for(int n=0; n<nData; ++n){
 				//strucs - original
 				for(int i=0; i<strucs_org[n].size(); i++){
@@ -2696,7 +2703,7 @@ int main(int argc, char* argv[]){
 					for(int j=0; j<nCores; ++j){
 						const int tc=struc.type(j);
 						const int ts=struc.type(nCores+j);
-						eZero+=units::Consts::ke()*1.0*-1.0*2.0/RadPI*(eCalc.rmuC()(tc,ts)-alpha);
+						eZero+=units::Consts::ke()*1.0*-1.0*2.0/RadPI*(eCalc.rgammaC()(tc,ts)-alpha);
 						eZero+=eCalc.aOver()(tc,ts)*1.0*1.0;
 					}
 					//relax the shells
@@ -2727,7 +2734,7 @@ int main(int argc, char* argv[]){
 					strucs_org[n][i].pe()-=eCGem;
 					//std::cout<<"t = "<<t<<" ftot = "<<ftot<<" ezero "<<eZero<<" ecoul "<<eCoul<<" ecgem "<<eCGem<<" alpha "<<eCalc.coul().alpha()<<" natoms "<<struc.nAtoms()<<"\n";
 				}
-				//compute cgem - total
+				//compute cgemm - total
 				for(int i=0; i<strucs_tot[n].size(); i++){
 					std::cout<<"strucs_tot["<<n<<"]["<<i<<"]\n";
 					//create new structure with added electrons
@@ -2771,7 +2778,7 @@ int main(int argc, char* argv[]){
 					for(int j=0; j<nCores; ++j){
 						const int tc=struc.type(j);
 						const int ts=struc.type(nCores+j);
-						eZero+=units::Consts::ke()*1.0*-1.0*2.0/RadPI*(eCalc.rmuC()(tc,ts)-alpha);
+						eZero+=units::Consts::ke()*1.0*-1.0*2.0/RadPI*(eCalc.rgammaC()(tc,ts)-alpha);
 						eZero+=eCalc.aOver()(tc,ts)*1.0*1.0;
 					}
 					//relax the system
@@ -3059,7 +3066,7 @@ int main(int argc, char* argv[]){
 		}
 		
 		//======== compute the final CGEM energies ========
-		if(compute.cgem && write.cgem){
+		if(compute.cgemm && write.cgemm){
 			if(NNPTEFR_PRINT_STATUS>-1 && WORLD.rank()==0) std::cout<<"computing final CGEM energies\n";
 			for(int n=0; n<nData; ++n){
 				if(dist_struc[n].size()>0){
