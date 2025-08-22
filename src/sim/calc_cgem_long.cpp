@@ -86,7 +86,6 @@ void CalcCGemLong::init(){
 	}
     coul_.prec()=prec_;
 	coul_.rc()=rc_;
-	coul_.econst()=false;
 }
 
 void CalcCGemLong::read(Token& token){
@@ -123,7 +122,7 @@ void CalcCGemLong::init(const Structure& struc){
 	coul_.init(struc);
 }
 
-double CalcCGemLong::energy(Structure& struc, const NeighborList& nlist){
+double CalcCGemLong::energy(Structure& struc, const NeighborList& nlist)const{
     if(CALC_CGEM_LONG_PRINT_FUNC>0) std::cout<<"CalcCGemLong::energy(const Structure&,const NeighborList&):\n";
     const double ke=units::Consts::ke()*eps_;
     // k-space
@@ -169,7 +168,7 @@ double CalcCGemLong::energy(Structure& struc, const NeighborList& nlist){
 	return energyR+energyK;
 }
 
-double CalcCGemLong::compute(Structure& struc, const NeighborList& nlist){
+double CalcCGemLong::compute(Structure& struc, const NeighborList& nlist)const{
     if(CALC_CGEM_LONG_PRINT_FUNC>0) std::cout<<"CalcCGemLong::compute(const Structure&,const NeighborList&):\n";
 	const double ke=units::Consts::ke()*eps_;
     // k-space
