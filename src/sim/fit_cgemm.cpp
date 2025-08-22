@@ -20,8 +20,14 @@
 //sim
 #include "sim/fit_cgemm.hpp"
 #include "sim/constraint_freeze.hpp"
+#include "sim/calc_factory.hpp"
+#include "sim/constraint_factory.hpp"
 //nlopt
 #include <nlopt.hpp>
+
+//************************************************************
+// Constants
+//************************************************************
 
 using math::constants::PI;
 
@@ -75,13 +81,13 @@ void CGemmType::read(Token& token){
 //*****************************************************
 
 double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData){
-    FunctionData& fData_=*((FunctionData*)fData);
-    const int ntypes=fData_.types.size();
-    std::cout<<"x = "; for(int i=0; i<x.size(); ++i) std::cout<<x[i]<<" "; std::cout<<"\n";
+    FunctionData* fData_=static_cast<FunctionData*>(fData);
+    const int ntypes=fData_->types.size();
+    //std::cout<<"x = "; for(int i=0; i<x.size(); ++i) std::cout<<x[i]<<" "; std::cout<<"\n";
     int c;
     
     //==== unpack the parameters - CGemm ====
-    CalcCGemmCut& calcCGemmCut=static_cast<CalcCGemmCut&>(*fData_.engine.calcs().front());
+    CalcCGemmCut& calcCGemmCut=static_cast<CalcCGemmCut&>(*fData_->engine.calcs().front());
     calcCGemmCut.lambdaC()=1.0;
     calcCGemmCut.lambdaS()=1.0;
     c=0;
@@ -90,33 +96,31 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
         calcCGemmCut.lambdaS()=x[c++];
     }
     if(opt_radius) for(int i=0; i<ntypes; ++i) calcCGemmCut.radius()[i]=x[c++];
-    else for(int i=0; i<ntypes; ++i) calcCGemmCut.radius()[i]=fData_.types[i].radius();
+    else for(int i=0; i<ntypes; ++i) calcCGemmCut.radius()[i]=fData_->types[i].radius();
     if(opt_aOver) for(int i=0; i<ntypes; ++i) calcCGemmCut.aOver()(i,i)=x[c++];
-    else for(int i=0; i<ntypes; ++i) calcCGemmCut.aOver()(i,i)=fData_.types[i].aOver();
-    for(int i=0; i<ntypes; ++i) calcCGemmCut.aRep()(i,i)=fData_.types[i].aRep();
+    else for(int i=0; i<ntypes; ++i) calcCGemmCut.aOver()(i,i)=fData_->types[i].aOver();
+    for(int i=0; i<ntypes; ++i) calcCGemmCut.aRep()(i,i)=fData_->types[i].aRep();
     calcCGemmCut.init();
 
     //==== unpack the parameters - types ====
     c=0;
-    if(opt_lambda){
-        c++;
-        c++;
-    }
-    if(opt_radius) for(int i=0; i<ntypes; ++i) fData_.types[i].radius()=x[c++];
-    if(opt_aOver) for(int i=0; i<ntypes; ++i) fData_.types[i].aOver()=x[c++];
+    if(opt_lambda) c+=2;
+    if(opt_radius) for(int i=0; i<ntypes; ++i) fData_->types[i].radius()=x[c++];
+    if(opt_aOver) for(int i=0; i<ntypes; ++i) fData_->types[i].aOver()=x[c++];
     
     //==== loop over each structure ====
-    Engine& engine=fData_.engine;
+    Engine& engine=fData_->engine;
     double t_avg=0;
+    double t_max=0;
     double f_avg=0;
-    int t_max=0;
+    double f_max=0;
     double error=0;
     double np=0;
-    for(int n=0; n<fData_.data.size(); ++n){
-        Structure& strucA=fData_.data[n].strucA();
-        Structure& strucN=fData_.data[n].strucN();
-        Grid& espA=fData_.data[n].espA();
-        Grid& espN=fData_.data[n].espN();
+    for(int n=0; n<fData_->data.size(); ++n){
+        Structure& strucA=fData_->data[n].strucA();
+        Structure& strucN=fData_->data[n].strucN();
+        Grid& espA=fData_->data[n].espA();
+        Grid& espN=fData_->data[n].espN();
 
         //set the constraints
         std::vector<int> indices;
@@ -166,9 +170,9 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
                 std::cout<<strucN.name(m)
                     <<" "<<strucN.type(m)
                     <<" "<<strucN.charge(m)
-                    <<" "<<fData_.types[strucN.type(m)].radius()
-                    <<" "<<fData_.types[strucN.type(m)].aOver()
-                    <<" "<<fData_.types[strucN.type(m)].aRep()
+                    <<" "<<fData_->types[strucN.type(m)].radius()
+                    <<" "<<fData_->types[strucN.type(m)].aOver()
+                    <<" "<<fData_->types[strucN.type(m)].aRep()
                     <<" "<<strucN.posn(m).transpose()
                     <<"\n";
             }
@@ -176,29 +180,30 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
         int t=0;
         double ftot=0;
         strucN.t()=0;
-        for(t=0; t<fData_.nsteps; ++t){
+        for(t=0; t<fData_->nsteps; ++t){
             //compute step
-            fData_.intg->compute(strucN,engine);
+            fData_->intg->compute(strucN,engine);
             //compute total force
             ftot=0;
             for(int m=0; m<strucN.nAtoms(); ++m){
                 ftot+=strucN.force(m).squaredNorm();
             }
             ftot=std::sqrt(ftot/strucN.nAtoms());
-            if(ftot<fData_.ftol) break;
+            if(ftot<fData_->ftol) break;
         }
         t_avg+=t;
         f_avg+=ftot;
         if(t>t_max) t_max=t;
+        if(ftot>f_max) f_max=ftot;
         if(PRINT_STRUC>0){
             std::cout<<strucN.nAtoms()<<"\nmolecule\n";
             for(int m=0; m<strucN.nAtoms(); ++m){
                 std::cout<<strucN.name(m)
                     <<" "<<strucN.type(m)
                     <<" "<<strucN.charge(m)
-                    <<" "<<fData_.types[strucN.type(m)].radius()
-                    <<" "<<fData_.types[strucN.type(m)].aOver()
-                    <<" "<<fData_.types[strucN.type(m)].aRep()
+                    <<" "<<fData_->types[strucN.type(m)].radius()
+                    <<" "<<fData_->types[strucN.type(m)].aOver()
+                    <<" "<<fData_->types[strucN.type(m)].aRep()
                     <<" "<<strucN.posn(m).transpose()
                     <<"\n";
             }
@@ -216,7 +221,7 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
                     data=0.0;
                     for(int m=0; m<strucN.nAtoms(); ++m){
                         const double dr=(r-strucN.posn(m)).norm();
-                        const double R=fData_.types[strucN.type(m)].radius();
+                        const double R=fData_->types[strucN.type(m)].radius();
                         const double alpha=calcCGemmCut.lambdaC()/(2.0*R*R);
                         data+=ke*strucN.charge(m)/dr*std::erf(std::sqrt(alpha)*dr);
                     }
@@ -236,11 +241,19 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
         np+=espA.np();
     }
     error/=np;
-    t_avg/=fData_.data.size();
-    f_avg/=fData_.data.size();
+    t_avg/=fData_->data.size();
+    f_avg/=fData_->data.size();
     
     //==== print error ====
-    std::cout<<"step "<<step<<" error "<<error<<" f_avg "<<f_avg<<" t_avg "<<t_avg<<" t_max "<<t_max<<"\n";
+    //std::cout<<"step "<<step<<" error "<<error<<" f_avg "<<f_avg<<" f_max "<<f_max<<" t_avg "<<t_avg<<" t_max "<<t_max<<"\n";
+    std::printf(
+        "%4i %10.6e %10.6e %10.6e %7i %7i",
+        step,error,f_avg,f_max,
+        static_cast<int>(std::round(t_avg)),
+        static_cast<int>(std::round(t_max))
+    );
+    for(int i=0; i<x.size(); ++i) std::printf("%12.8f ",x[i]);
+    std::printf("\n");
     step++;
     
     //==== return error ====
@@ -619,8 +632,8 @@ int main(int argc, char* argv[]){
             lb[c++]=1.0e-3;
             lb[c++]=1.0e-3;
         }
-        if(opt_radius) for(int i=0; i<ntypes; ++i) lb[c++]=1.0e-6;
-        if(opt_aOver) for(int i=0; i<ntypes; ++i) lb[c++]=1.0e-6;
+        if(opt_radius) for(int i=0; i<ntypes; ++i) lb[c++]=1.0e-3;
+        if(opt_aOver) for(int i=0; i<ntypes; ++i) lb[c++]=1.0e-3;
         c=0;
         if(opt_lambda){
             ub[c++]=HUGE_VAL;
@@ -646,6 +659,12 @@ int main(int argc, char* argv[]){
         //==== optimize ====
         std::cout<<"optimizing\n";
 		double minf;
+        //std::cout<<"step "<<step<<" error "<<error<<" f_avg "<<f_avg<<" f_max "<<f_max<<" t_avg "<<t_avg<<" t_max "<<t_max<<"\n";
+        std::printf("step error f_avg f_max t_avg t_max ");
+        if(opt_lambda) std::printf("lambdaC lambdaS ");
+        if(opt_radius) for(int i=0; i<types.size(); ++i) std::printf("R[%s] ",types[i].name().c_str());
+        if(opt_aOver) for(int i=0; i<types.size(); ++i) std::printf("A[%s] ",types[i].name().c_str());
+        std::printf("\n");
 		nlopt::result result=opt.optimize(x,minf);
 		if(result>=0) std::cout<<"optimization successful\n";
 		
@@ -674,17 +693,25 @@ int main(int argc, char* argv[]){
                     }
                 }
             }
+            double error=0;
+            for(int i=0; i<npts[0]; ++i){
+                for(int j=0; j<npts[1]; ++j){
+                    for(int k=0; k<npts[2]; ++k){
+                        error+=std::fabs(espN(i,j,k)-espA(i,j,k));
+                    }
+                }
+            }
+            error/=espA.np();
+            std::cout<<"error["<<n<<"] = "<<error<<"\n";
             for(int i=0; i<npts[0]; ++i){
                 for(int j=0; j<npts[1]; ++j){
                     for(int k=0; k<npts[2]; ++k){
                         espN(i,j,k)*=1.0/fpot;
-                        //espA(i,j,k)*=1.0/fpot;
                     }
                 }
             }
             std::string filename="out_n"+std::to_string(n)+".cube";
             CUBE::write(filename.c_str(),atom,strucN,espN);
-            //CUBE::write(filename.c_str(),atom,strucA,espA);
         }
     }catch(std::exception& e){
 		std::cout<<"ERROR in fit_CGemm::main(int,char**):\n";
