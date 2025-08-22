@@ -288,4 +288,54 @@ public:
 	std::ostream& print(std::ostream& out)const;	
 };
 
+//**********************************************
+// serialization
+//**********************************************
+	
+namespace serialize{
+	
+	//**********************************************
+	// byte measures
+	//**********************************************
+	
+	template <> int nbytes(const Integrator& obj);
+	template <> int nbytes(const Quickmin& obj);
+	template <> int nbytes(const Fire& obj);
+	template <> int nbytes(const CG& obj);
+	template <> int nbytes(const Verlet& obj);
+	template <> int nbytes(const VScale& obj);
+	template <> int nbytes(const Berendsen& obj);
+	template <> int nbytes(const Langevin& obj);
+	template <> int nbytes(const std::shared_ptr<Integrator>& ptr);
+	
+	//**********************************************
+	// packing
+	//**********************************************
+	
+	template <> int pack(const Integrator& obj, char* arr);
+	template <> int pack(const Quickmin& obj, char* arr);
+	template <> int pack(const Fire& obj, char* arr);
+	template <> int pack(const CG& obj, char* arr);
+	template <> int pack(const Verlet& obj, char* arr);
+	template <> int pack(const VScale& obj, char* arr);
+	template <> int pack(const Berendsen& obj, char* arr);
+	template <> int pack(const Langevin& obj, char* arr);
+	template <> int pack(const std::shared_ptr<Integrator>& obj, char* arr);
+	
+	//**********************************************
+	// unpacking
+	//**********************************************
+	
+	template <> int unpack(Integrator& obj, const char* arr);
+	template <> int unpack(Quickmin& obj, const char* arr);
+	template <> int unpack(Fire& obj, const char* arr);
+	template <> int unpack(CG& obj, const char* arr);
+	template <> int unpack(Verlet& obj, const char* arr);
+	template <> int unpack(VScale& obj, const char* arr);
+	template <> int unpack(Berendsen& obj, const char* arr);
+	template <> int unpack(Langevin& obj, const char* arr);
+	template <> int unpack(std::shared_ptr<Integrator>& obj, const char* arr);
+	
+}
+
 #endif

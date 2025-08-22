@@ -909,3 +909,288 @@ std::ostream& Langevin::print(std::ostream& out)const{
 std::ostream& operator<<(std::ostream& out, const Langevin& intg){
 	return out<<intg.name()<<" "<<intg.dt()<<" "<<intg.T()<<" "<<intg.gamma();
 }
+
+//**********************************************
+// serialization
+//**********************************************
+	
+namespace serialize{
+	
+	//**********************************************
+	// byte measures
+	//**********************************************
+	
+	template <> int nbytes(const Integrator& obj){
+		int size=0;
+		size+=sizeof(double);//dt
+		size+=sizeof(double);//dmax
+		return size;
+	}
+	template <> int nbytes(const Quickmin& obj){
+		int size=0;
+		size+=nbytes(static_cast<const Integrator&>(obj));
+		return size;
+	}
+	template <> int nbytes(const Fire& obj){
+		int size=0;
+		size+=nbytes(static_cast<const Integrator&>(obj));
+		size+=sizeof(int)*4;
+		size+=sizeof(double)*7;
+		return size;
+	}
+	template <> int nbytes(const CG& obj){
+		int size=0;
+		size+=nbytes(static_cast<const Integrator&>(obj));
+		return size;
+	}
+	template <> int nbytes(const Verlet& obj){
+		int size=0;
+		size+=nbytes(static_cast<const Integrator&>(obj));
+		return size;
+	}
+	template <> int nbytes(const VScale& obj){
+		int size=0;
+		size+=nbytes(static_cast<const Integrator&>(obj));
+		size+=sizeof(double);
+		size+=sizeof(double);
+		return size;
+	}
+	template <> int nbytes(const Berendsen& obj){
+		int size=0;
+		size+=nbytes(static_cast<const Integrator&>(obj));
+		size+=sizeof(double);
+		size+=sizeof(double);
+		return size;
+	}
+	template <> int nbytes(const Langevin& obj){
+		int size=0;
+		size+=nbytes(static_cast<const Integrator&>(obj));
+		size+=sizeof(double);
+		size+=sizeof(double);
+		return size;
+	}
+	template <> int nbytes(const std::shared_ptr<Integrator>& ptr){
+		int size=0;
+		Integrator::Name name=ptr->name();
+		size+=nbytes(name);
+		switch(name){
+			case Integrator::Name::QUICKMIN:{
+				size+=nbytes(static_cast<const Quickmin&>(*ptr));
+			}break;
+			case Integrator::Name::FIRE:{
+				size+=nbytes(static_cast<const Fire&>(*ptr));
+			}break;
+			case Integrator::Name::CG:{
+				size+=nbytes(static_cast<const CG&>(*ptr));
+			}break;
+			case Integrator::Name::VERLET:{
+				size+=nbytes(static_cast<const Verlet&>(*ptr));
+			}break;
+			case Integrator::Name::VSCALE:{
+				size+=nbytes(static_cast<const VScale&>(*ptr));
+			}break;
+			case Integrator::Name::BERENDSEN:{
+				size+=nbytes(static_cast<const Berendsen&>(*ptr));
+			}break;
+			case Integrator::Name::LANGEVIN:{
+				size+=nbytes(static_cast<const Langevin&>(*ptr));
+			}break;
+			default: break;
+		}
+		return size;
+	}
+
+	//**********************************************
+	// packing
+	//**********************************************
+	
+	template <> int pack(const Integrator& obj, char* arr){
+		int pos=0;
+		std::memcpy(arr+pos,&obj.dt(),sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(arr+pos,&obj.dmax(),sizeof(double)); pos+=sizeof(double);//size
+		return pos;
+	}
+	template <> int pack(const Quickmin& obj, char* arr){
+		int pos=0;
+		pos+=pack(static_cast<const Integrator&>(obj),arr+pos);
+		return pos;
+	}
+	template <> int pack(const Fire& obj, char* arr){
+		int pos=0;
+		pos+=pack(static_cast<const Integrator&>(obj),arr+pos);
+		std::memcpy(arr+pos,&obj.ndelay(),sizeof(int)); pos+=sizeof(int);//size
+		std::memcpy(arr+pos,&obj.npos(),sizeof(int)); pos+=sizeof(int);//size
+		std::memcpy(arr+pos,&obj.nneg(),sizeof(int)); pos+=sizeof(int);//size
+		std::memcpy(arr+pos,&obj.nmax(),sizeof(int)); pos+=sizeof(int);//size
+		std::memcpy(arr+pos,&obj.alpha0(),sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(arr+pos,&obj.alpha(),sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(arr+pos,&obj.falpha(),sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(arr+pos,&obj.fdtd(),sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(arr+pos,&obj.fdti(),sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(arr+pos,&obj.dtmin(),sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(arr+pos,&obj.dtmax(),sizeof(double)); pos+=sizeof(double);//size
+		return pos;
+	}
+	template <> int pack(const CG& obj, char* arr){
+		int pos=0;
+		pos+=pack(static_cast<const Integrator&>(obj),arr+pos);
+		return pos;
+	}
+	template <> int pack(const Verlet& obj, char* arr){
+		int pos=0;
+		pos+=pack(static_cast<const Integrator&>(obj),arr+pos);
+		return pos;
+	}
+	template <> int pack(const VScale& obj, char* arr){
+		int pos=0;
+		pos+=pack(static_cast<const Integrator&>(obj),arr+pos);
+		std::memcpy(arr+pos,&obj.T(),sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(arr+pos,&obj.tau(),sizeof(double)); pos+=sizeof(double);//size
+		return pos;
+	}
+	template <> int pack(const Berendsen& obj, char* arr){
+		int pos=0;
+		pos+=pack(static_cast<const Integrator&>(obj),arr+pos);
+		std::memcpy(arr+pos,&obj.T(),sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(arr+pos,&obj.tau(),sizeof(double)); pos+=sizeof(double);//size
+		return pos;
+	}
+	template <> int pack(const Langevin& obj, char* arr){
+		int pos=0;
+		pos+=pack(static_cast<const Integrator&>(obj),arr+pos);
+		std::memcpy(arr+pos,&obj.T(),sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(arr+pos,&obj.gamma(),sizeof(double)); pos+=sizeof(double);//size
+		return pos;
+	}
+	template <> int pack(const std::shared_ptr<Integrator>& ptr, char* arr){
+		int pos=0;
+		Integrator::Name name=ptr->name();
+		pos+=pack(name,arr+pos);
+		switch(name){
+			case Integrator::Name::QUICKMIN:{
+				pos+=pack(static_cast<const Quickmin&>(*ptr),arr+pos);
+			}break;
+			case Integrator::Name::FIRE:{
+				pos+=pack(static_cast<const Fire&>(*ptr),arr+pos);
+			}break;
+			case Integrator::Name::CG:{
+				pos+=pack(static_cast<const CG&>(*ptr),arr+pos);
+			}break;
+			case Integrator::Name::VERLET:{
+				pos+=pack(static_cast<const Verlet&>(*ptr),arr+pos);
+			}break;
+			case Integrator::Name::VSCALE:{
+				pos+=pack(static_cast<const VScale&>(*ptr),arr+pos);
+			}break;
+			case Integrator::Name::BERENDSEN:{
+				pos+=pack(static_cast<const Berendsen&>(*ptr),arr+pos);
+			}break;
+			case Integrator::Name::LANGEVIN:{
+				pos+=pack(static_cast<const Langevin&>(*ptr),arr+pos);
+			}break;
+			default: break;
+		}
+		return pos;
+	}
+
+	//**********************************************
+	// unpacking
+	//**********************************************
+	
+	template <> int unpack(Integrator& obj, const char* arr){
+		int pos=0;
+		std::memcpy(&obj.dt(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(&obj.dmax(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		return pos;
+	}
+	template <> int unpack(Quickmin& obj, const char* arr){
+		int pos=0;
+		pos+=unpack(static_cast<Integrator&>(obj),arr+pos);
+		return pos;
+	}
+	template <> int unpack(Fire& obj, const char* arr){
+		int pos=0;
+		pos+=unpack(static_cast<Integrator&>(obj),arr+pos);
+		std::memcpy(&obj.ndelay(),arr+pos,sizeof(int)); pos+=sizeof(int);//size
+		std::memcpy(&obj.npos(),arr+pos,sizeof(int)); pos+=sizeof(int);//size
+		std::memcpy(&obj.nneg(),arr+pos,sizeof(int)); pos+=sizeof(int);//size
+		std::memcpy(&obj.nmax(),arr+pos,sizeof(int)); pos+=sizeof(int);//size
+		std::memcpy(&obj.alpha0(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(&obj.alpha(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(&obj.falpha(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(&obj.fdtd(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(&obj.fdti(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(&obj.dtmin(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(&obj.dtmax(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		return pos;
+	}
+	template <> int unpack(CG& obj, const char* arr){
+		int pos=0;
+		pos+=unpack(static_cast<Integrator&>(obj),arr+pos);
+		return pos;
+	}
+	template <> int unpack(Verlet& obj, const char* arr){
+		int pos=0;
+		pos+=unpack(static_cast<Integrator&>(obj),arr+pos);
+		return pos;
+	}
+	template <> int unpack(VScale& obj, const char* arr){
+		int pos=0;
+		pos+=unpack(static_cast<Integrator&>(obj),arr+pos);
+		std::memcpy(&obj.T(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(&obj.tau(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		return pos;
+	}
+	template <> int unpack(Berendsen& obj, const char* arr){
+		int pos=0;
+		pos+=unpack(static_cast<Integrator&>(obj),arr+pos);
+		std::memcpy(&obj.T(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(&obj.tau(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		return pos;
+	}
+	template <> int unpack(Langevin& obj, const char* arr){
+		int pos=0;
+		pos+=unpack(static_cast<Integrator&>(obj),arr+pos);
+		std::memcpy(&obj.T(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		std::memcpy(&obj.gamma(),arr+pos,sizeof(double)); pos+=sizeof(double);//size
+		return pos;
+	}
+	template <> int unpack(std::shared_ptr<Integrator>& ptr, const char* arr){
+		int pos=0;
+		Integrator::Name name=Integrator::Name::NONE;
+		pos+=unpack(name,arr+pos);
+		switch(name){
+			case Integrator::Name::QUICKMIN:{
+				ptr=std::make_shared<Quickmin>();
+				pos+=unpack(static_cast<Quickmin&>(*ptr),arr+pos);
+			}break;
+			case Integrator::Name::FIRE:{
+				ptr=std::make_shared<Fire>();
+				pos+=unpack(static_cast<Fire&>(*ptr),arr+pos);
+			}break;
+			case Integrator::Name::CG:{
+				ptr=std::make_shared<CG>();
+				pos+=unpack(static_cast<CG&>(*ptr),arr+pos);
+			}break;
+			case Integrator::Name::VERLET:{
+				ptr=std::make_shared<Verlet>();
+				pos+=unpack(static_cast<Verlet&>(*ptr),arr+pos);
+			}break;
+			case Integrator::Name::VSCALE:{
+				ptr=std::make_shared<VScale>();
+				pos+=unpack(static_cast<VScale&>(*ptr),arr+pos);
+			}break;
+			case Integrator::Name::BERENDSEN:{
+				ptr=std::make_shared<Berendsen>();
+				pos+=unpack(static_cast<Berendsen&>(*ptr),arr+pos);
+			}break;
+			case Integrator::Name::LANGEVIN:{
+				ptr=std::make_shared<Langevin>();
+				pos+=unpack(static_cast<Langevin&>(*ptr),arr+pos);
+			}break;
+			default: break;
+		}
+		return pos;
+	}
+	
+}
