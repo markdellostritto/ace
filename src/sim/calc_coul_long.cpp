@@ -51,7 +51,7 @@ void CalcCoulLong::init(const Structure& struc){
 	coul_.init(struc);
 }
 
-double CalcCoulLong::energy(Structure& struc, const NeighborList& nlist){
+double CalcCoulLong::energy(Structure& struc, const NeighborList& nlist)const{
 	const double ke=units::Consts::ke()*eps_;
 	// k-space
 	//coul_.init(struc);
@@ -84,7 +84,7 @@ double CalcCoulLong::energy(Structure& struc, const NeighborList& nlist){
 	return energyR+energyK;
 }
 
-double CalcCoulLong::compute(Structure& struc, const NeighborList& nlist){
+double CalcCoulLong::compute(Structure& struc, const NeighborList& nlist)const{
 	const double ke=units::Consts::ke()*eps_;
 	// k-space
 	//coul_.init(struc);
@@ -159,6 +159,7 @@ namespace serialize{
 		if(CALC_COUL_LONG_PRINT_FUNC>0) std::cout<<"unpack(CalcCoulLong&,const char*):\n";
 		int pos=0;
 		pos+=unpack(static_cast<Calculator&>(obj),arr+pos);
+		if(obj.name()!=Calculator::Name::COUL_LONG) throw std::invalid_argument("serialize::unpack(CalcCoulLong&,const char*): Invalid name.");
 		std::memcpy(&obj.eps(),arr+pos,sizeof(double)); pos+=sizeof(double);//eps_
 		std::memcpy(&obj.prec(),arr+pos,sizeof(double)); pos+=sizeof(double);//prec_
 		obj.init();
