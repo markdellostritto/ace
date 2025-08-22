@@ -1711,6 +1711,7 @@ int main(int argc, char* argv[]){
 		std::vector<double> time_energy(nData,0.0);
 		std::vector<double> time_force(nData,0.0);
 		std::vector<double> time_symm(nData,0.0);
+		std::vector<double> time_cgemm(nData,0.0);
 	//file i/o
 		FILE* reader=NULL;
 		char* paramfile=new char[string::M];
@@ -2142,16 +2143,45 @@ int main(int argc, char* argv[]){
 		MPI_Bcast(&write.cgemm,1,MPI_C_BOOL,0,WORLD.mpic());
 		//external potential
 		if(compute.cgemm){
+			//cgemm
 			thread::bcast(WORLD.mpic(),0,calcCGemmLong);
+			//tolerance
 			MPI_Bcast(&stride,1,MPI_INT,0,WORLD.mpic());
 			MPI_Bcast(&nsteps,1,MPI_INT,0,WORLD.mpic());
 			MPI_Bcast(&ftol,1,MPI_DOUBLE,0,WORLD.mpic());
+			//shell
 			MPI_Bcast(&shell.radius,1,MPI_DOUBLE,0,WORLD.mpic());
 			MPI_Bcast(&shell.amp,1,MPI_DOUBLE,0,WORLD.mpic());
 			MPI_Bcast(&shell.rep,1,MPI_DOUBLE,0,WORLD.mpic());
+			//integrator - name
+			Integrator::Name iname=Integrator::Name::NONE;
+			if(WORLD.rank()==0) iname=integrator->name();
+			MPI_Bcast(&iname,1,MPI_INT,0,WORLD.mpic());
+			//integrator - object
+			switch(iname){
+				case Integrator::Name::QUICKMIN:{
+					Quickmin obj;
+					if(WORLD.rank()==0) obj=static_cast<Quickmin&>(*integrator);
+					thread::bcast(WORLD.mpic(),0,obj);
+					integrator=std::make_shared<Quickmin>(obj);
+				}break;
+				case Integrator::Name::FIRE:{
+					Fire obj;
+					if(WORLD.rank()==0) obj=static_cast<Fire&>(*integrator);
+					thread::bcast(WORLD.mpic(),0,obj);
+					integrator=std::make_shared<Fire>(obj);
+				}break;
+				case Integrator::Name::CG:{
+					CG obj;
+					if(WORLD.rank()==0) obj=static_cast<CG&>(*integrator);
+					thread::bcast(WORLD.mpic(),0,obj);
+					integrator=std::make_shared<CG>(obj);
+				}break;
+				default: 
+					throw std::invalid_argument("Error in nnptefr2::main(int,char**): Invalid integrator.");
+				break;
+			}
 		}
-		integrator.reset(new Quickmin());
-		integrator->dt()=1.0e-1;
 		//batch
 		MPI_Bcast(&nBatch,1,MPI_INT,0,WORLD.mpic());
 		//structures - format
@@ -2404,6 +2434,7 @@ int main(int argc, char* argv[]){
 			eCalc.aRep()=calcCGemmLong.aRep();
 			eCalc.init();
 			//compute cgemm - original
+			clock.start();
 			for(int n=0; n<nData; ++n){
 				//strucs - original
 				for(int i=0; i<strucs_org[n].size(); i++){
@@ -2491,6 +2522,8 @@ int main(int argc, char* argv[]){
 						strucs_org[n][i].force(j).noalias()-=struc.force(j);
 					}
 				}
+				clock.stop();
+				time_cgemm[n]=clock.duration();
 			}
 			double tavg_tot=0;
 			double tmax_tot=0;
@@ -3091,9 +3124,9 @@ int main(int argc, char* argv[]){
 					if(WORLD.rank()==0){
 						std::string file;
 						switch(n){
-							case 0: file="nnp_ecgem_train.dat"; break;
-							case 1: file="nnp_ecgem_val.dat"; break;
-							case 2: file="nnp_ecgem_test.dat"; break;
+							case 0: file="nnp_ecgemm_train.dat"; break;
+							case 1: file="nnp_ecgemm_val.dat"; break;
+							case 2: file="nnp_ecgemm_test.dat"; break;
 							default: file="ERROR.dat"; break;
 						}
 						FILE* writer=fopen(file.c_str(),"w");
@@ -3444,9 +3477,11 @@ int main(int argc, char* argv[]){
 			MPI_Allreduce(MPI_IN_PLACE,&time_symm[n],1,MPI_DOUBLE,MPI_SUM,WORLD.mpic()); 
 			MPI_Allreduce(MPI_IN_PLACE,&time_energy[n],1,MPI_DOUBLE,MPI_SUM,WORLD.mpic()); 
 			MPI_Allreduce(MPI_IN_PLACE,&time_force[n],1,MPI_DOUBLE,MPI_SUM,WORLD.mpic());
+			MPI_Allreduce(MPI_IN_PLACE,&time_cgemm[n],1,MPI_DOUBLE,MPI_SUM,WORLD.mpic());
 			time_symm[n]/=WORLD.size();
 			time_energy[n]/=WORLD.size();
 			time_force[n]/=WORLD.size();
+			time_cgemm[n]/=WORLD.size();
 		}
 		if(WORLD.rank()==0){
 			std::cout<<print::buf(strbuf)<<"\n";
@@ -3455,16 +3490,25 @@ int main(int argc, char* argv[]){
 				std::cout<<"time - symm   - train = "<<time_symm[0]<<"\n";
 				std::cout<<"time - energy - train = "<<time_energy[0]<<"\n";
 				std::cout<<"time - force  - train = "<<time_force[0]<<"\n";
+				if(compute.cgemm){
+				std::cout<<"time - cgemm - train  = "<<time_cgemm[0]<<"\n";
+				}
 			}
 			if(strucs_org[1].size()>0){
 				std::cout<<"time - symm   - val   = "<<time_symm[1]<<"\n";
 				std::cout<<"time - energy - val   = "<<time_energy[1]<<"\n";
 				std::cout<<"time - force  - val   = "<<time_force[1]<<"\n";
+				if(compute.cgemm){
+				std::cout<<"time - cgemm - val    = "<<time_cgemm[1]<<"\n";
+				}
 			}
 			if(strucs_org[2].size()>0){
 				std::cout<<"time - symm   - test  = "<<time_symm[2]<<"\n";
 				std::cout<<"time - energy - test  = "<<time_energy[2]<<"\n";
 				std::cout<<"time - force  - test  = "<<time_force[2]<<"\n";
+				if(compute.cgemm){
+				std::cout<<"time - cgemm - test   = "<<time_cgemm[2]<<"\n";
+				}
 			}
 			std::cout<<"time - wall           = "<<time_wall<<"\n";
 			std::cout<<print::buf(strbuf)<<"\n";
