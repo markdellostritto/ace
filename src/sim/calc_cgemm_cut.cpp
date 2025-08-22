@@ -128,7 +128,7 @@ void CalcCGemmCut::coeff(Token& token){
 	aRep_(type,type)=aRep;
 }
 
-double CalcCGemmCut::energy(Structure& struc, const NeighborList& nlist){
+double CalcCGemmCut::energy(Structure& struc, const NeighborList& nlist)const{
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::energy(const Structure&,const NeighborList&):\n";
     const double ke=units::Consts::ke();
 	const double cRep=1.0/(2.0*rRep*rRep);
@@ -164,7 +164,7 @@ double CalcCGemmCut::energy(Structure& struc, const NeighborList& nlist){
 	return energy;
 }
 
-double CalcCGemmCut::energy(Structure& struc){
+double CalcCGemmCut::energy(Structure& struc)const{
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::energy(const Structure&):\n";
     const double ke=units::Consts::ke();
 	const double cRep=1.0/(2.0*rRep*rRep);
@@ -198,7 +198,7 @@ double CalcCGemmCut::energy(Structure& struc){
 	return energy;
 }
 
-double CalcCGemmCut::compute(Structure& struc, const NeighborList& nlist){
+double CalcCGemmCut::compute(Structure& struc, const NeighborList& nlist)const{
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::compute(const Structure&,const NeighborList&):\n";
     const double ke=units::Consts::ke();
 	const double cRep=1.0/(2.0*rRep*rRep);
@@ -256,7 +256,7 @@ double CalcCGemmCut::compute(Structure& struc, const NeighborList& nlist){
 	return energy;
 }
 
-double CalcCGemmCut::compute(Structure& struc){
+double CalcCGemmCut::compute(Structure& struc)const{
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::compute(const Structure&):\n";
     const double ke=units::Consts::ke();
 	const double cRep=1.0/(2.0*rRep*rRep);
@@ -369,7 +369,7 @@ namespace serialize{
 		if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"unpack(CalcCGemmCut&,const char*):\n";
 		int pos=0,nt=0;
 		pos+=unpack(static_cast<Calculator&>(obj),arr+pos);
-		if(obj.name()!=Calculator::Name::CGEM_CUT) throw std::invalid_argument("serialize::unpack(CalcCGemmCut&,const char*): Invalid name.");
+		if(obj.name()!=Calculator::Name::CGEMM_CUT) throw std::invalid_argument("serialize::unpack(CalcCGemmCut&,const char*): Invalid name.");
 		std::memcpy(&obj.mix(),arr+pos,sizeof(obj.mix())); pos+=sizeof(obj.mix());//mix_
 		std::memcpy(&nt,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
 		std::memcpy(&obj.lambdaC(),arr+pos,sizeof(double)); pos+=sizeof(double);//lambdaC_
