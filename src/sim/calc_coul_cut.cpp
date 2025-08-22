@@ -28,7 +28,7 @@ void CalcCoulCut::coeff(Token& token){
 	//coeff coul_cut type1 type2 
 }
 
-double CalcCoulCut::energy(Structure& struc, const NeighborList& nlist){
+double CalcCoulCut::energy(Structure& struc, const NeighborList& nlist)const{
     if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::energy(const Structure&,const NeighborList&):\n";
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -49,7 +49,7 @@ double CalcCoulCut::energy(Structure& struc, const NeighborList& nlist){
 	return energy;
 }
 
-double CalcCoulCut::energy(Structure& struc){
+double CalcCoulCut::energy(Structure& struc)const{
     if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::energy(const Structure&):\n";
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -67,7 +67,7 @@ double CalcCoulCut::energy(Structure& struc){
 	return energy;
 }
 
-double CalcCoulCut::compute(Structure& struc, const NeighborList& nlist){
+double CalcCoulCut::compute(Structure& struc, const NeighborList& nlist)const{
     if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::compute(const Structure&,const NeighborList&):\n";
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -89,7 +89,7 @@ double CalcCoulCut::compute(Structure& struc, const NeighborList& nlist){
 	return energy;
 }
 
-double CalcCoulCut::compute(Structure& struc){
+double CalcCoulCut::compute(Structure& struc)const{
     if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::compute(const Structure&):\n";
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -151,7 +151,7 @@ namespace serialize{
 		if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"unpack(CalcCoulCut&,const char*):\n";
 		int pos=0,nt=0;
 		pos+=unpack(static_cast<Calculator&>(obj),arr+pos);
-		if(obj.name()!=Calculator::Name::LJ_CUT) throw std::invalid_argument("serialize::unpack(CalcCoulCut&,const char*): Invalid name.");
+		if(obj.name()!=Calculator::Name::COUL_CUT) throw std::invalid_argument("serialize::unpack(CalcCoulCut&,const char*): Invalid name.");
 		std::memcpy(&nt,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
 		obj.resize(nt);
 		obj.init();
