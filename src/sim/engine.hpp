@@ -28,7 +28,7 @@ private:
 	std::vector<std::shared_ptr<Constraint> > constraints_;//constraints
 public:
 	//==== constructors/destructors ====
-	Engine():ntypes_(-1){}
+	Engine():stride_(1),ntypes_(-1),rcmax_(0.0){}
 	~Engine(){}
 	
 	//==== operators ====
@@ -48,8 +48,8 @@ public:
 	//constraints
 	std::vector<std::shared_ptr<Constraint> >& constraints(){return constraints_;}
 	const std::vector<std::shared_ptr<Constraint> >& constraints()const{return constraints_;}
-	std::shared_ptr<Constraint>& constraints(int i){return constraints_[i];}
-	const std::shared_ptr<Constraint>& constraints(int i)const{return constraints_[i];}
+	std::shared_ptr<Constraint>& constraint(int i){return constraints_[i];}
+	const std::shared_ptr<Constraint>& constraint(int i)const{return constraints_[i];}
 	
 	//==== member functions ====
 	//reading/writing
@@ -60,10 +60,10 @@ public:
 	void init();
 	void init(const Structure& struc);
 	//energy/forces
-	double energy(Structure& struc);
-	double energy(Structure& struc, const NeighborList& nlist);
-	double compute(Structure& struc);
-	double compute(Structure& struc, const NeighborList& nlist);
+	double energy(Structure& struc)const;
+	double energy(Structure& struc, const NeighborList& nlist)const;
+	double compute(Structure& struc)const;
+	double compute(Structure& struc, const NeighborList& nlist)const;
 	
 	//==== static functions ====
 	static double ke(const Structure& struc);

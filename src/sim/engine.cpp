@@ -33,7 +33,7 @@ std::ostream& operator<<(std::ostream& out, const Engine& engine){
 	}
 	out<<"constraints = \n";
 	for(int i=0; i<engine.constraints().size(); ++i){
-		out<<engine.constraints(i)<<"\n";
+		out<<engine.constraint(i)<<"\n";
 	}
 	out<<print::buf(str);
 	delete[] str;
@@ -79,7 +79,7 @@ void Engine::init(const Structure& struc){
 
 //** energy/forces **
 
-double Engine::energy(Structure& struc){
+double Engine::energy(Structure& struc)const{
 	if(ENGINE_PRINT_FUNC>0) std::cout<<"Engine::energy(Structure&):\n";
 	double energy=0;
 	//reset energy
@@ -92,7 +92,7 @@ double Engine::energy(Structure& struc){
 	return energy;
 }
 
-double Engine::energy(Structure& struc, const NeighborList& nlist){
+double Engine::energy(Structure& struc, const NeighborList& nlist)const{
 	if(ENGINE_PRINT_FUNC>0) std::cout<<"Engine::energy(Structure&,const NeighborList&):\n";
 	double energy=0;
 	//reset energy
@@ -105,7 +105,7 @@ double Engine::energy(Structure& struc, const NeighborList& nlist){
 	return energy;
 }
 
-double Engine::compute(Structure& struc){
+double Engine::compute(Structure& struc)const{
 	if(ENGINE_PRINT_FUNC>0) std::cout<<"Engine::compute(Structure&):\n";
 	double energy=0;
 	//reset energy/forces
@@ -125,7 +125,7 @@ double Engine::compute(Structure& struc){
 	return energy;
 }
 
-double Engine::compute(Structure& struc, const NeighborList& nlist){
+double Engine::compute(Structure& struc, const NeighborList& nlist)const{
 	if(ENGINE_PRINT_FUNC>0) std::cout<<"Engine::compute(Structure&,const NeighborList&):\n";
 	double energy=0;
 	//reset energy/forces
@@ -176,15 +176,13 @@ namespace serialize{
 		size+=sizeof(int);//stride_
 		size+=sizeof(int);//ntypes_
 		size+=sizeof(int);//ncalcs
-		/*for(int i=0; i<obj.calcs().size(); ++i){
-			size+=sizeof(int);//name_
-			switch(obj.calc(i)->name()){
-				case Calculator::Name::LJ_CUT:{
-					size+=nbytes(static_cast<const CalcLJCut&>(*obj.calc(i)));
-				}break;
-				default: break;
-			}
-		}*/
+		size+=sizeof(int);//nconstraints
+		for(int i=0; i<obj.calcs().size(); ++i){
+			size+=nbytes(obj.calc(i));
+		}
+		for(int i=0; i<obj.constraints().size(); ++i){
+			size+=nbytes(obj.constraint(i));
+		}
 		return size;
 	}
 	
@@ -198,20 +196,18 @@ namespace serialize{
 		int pos=0;
 		const int stride=obj.stride();
 		const int ntypes=obj.ntypes();
+		const int ncalcs=obj.calcs().size();
+		const int nconstraints=obj.constraints().size();
 		std::memcpy(arr+pos,&stride,sizeof(int)); pos+=sizeof(int);//nstride_
 		std::memcpy(arr+pos,&ntypes,sizeof(int)); pos+=sizeof(int);//ntypes_
-		int ncalcs=obj.calcs().size();
-		std::memcpy(arr+pos,&ncalcs,sizeof(int)); pos+=sizeof(int);//job_
-		/*for(int i=0; i<obj.calcs().size(); ++i){
-			Calculator::Name name=obj.calc(i)->name();
-			std::memcpy(arr+pos,&name,sizeof(int)); pos+=sizeof(int);//name_
-			switch(obj.calc(i)->name()){
-				case Calculator::Name::LJ_CUT:{
-					pos+=pack(static_cast<const CalcLJCut&>(*obj.calc(i)),arr+pos);
-				}break;
-				default: break;
-			}
-		}*/
+		std::memcpy(arr+pos,&ncalcs,sizeof(int)); pos+=sizeof(int);//ncalcs
+		std::memcpy(arr+pos,&nconstraints,sizeof(int)); pos+=sizeof(int);//nconstraints
+		for(int i=0; i<obj.calcs().size(); ++i){
+			pos+=pack(obj.calc(i),arr+pos);
+		}
+		for(int i=0; i<obj.constraints().size(); ++i){
+			pos+=pack(obj.constraint(i),arr+pos);
+		}
 		return pos;
 	}
 	
@@ -224,23 +220,22 @@ namespace serialize{
 		int pos=0;
 		int stride=0;
 		int ntypes=0;
+		int ncalcs=0;
+		int nconstraints=0;
 		std::memcpy(&stride,arr+pos,sizeof(int)); pos+=sizeof(int);//nstride_
 		std::memcpy(&ntypes,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
+		std::memcpy(&ncalcs,arr+pos,sizeof(int)); pos+=sizeof(int);//ncalcs
+		std::memcpy(&nconstraints,arr+pos,sizeof(int)); pos+=sizeof(int);//ncalcs
 		obj.resize(ntypes);
 		obj.stride()=stride;
-		int ncalcs=0;
-		std::memcpy(&ncalcs,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
-		/*obj.calcs().resize(ncalcs);
+		obj.calcs().resize(ncalcs);
+		obj.constraints().resize(nconstraints);
 		for(int i=0; i<obj.calcs().size(); ++i){
-			Calculator::Name name;
-			std::memcpy(&name,arr+pos,sizeof(int)); pos+=sizeof(int);//name_
-			switch(name){
-				case Calculator::Name::LJ_CUT:{
-					CalcLJCut calc; pos+=unpack(calc,arr+pos); obj.calc(i).reset(calc);
-				}break;
-				default: break;
-			}
-		}*/
+			pos+=unpack(obj.calc(i),arr+pos);
+		}
+		for(int i=0; i<obj.constraints().size(); ++i){
+			pos+=unpack(obj.constraint(i),arr+pos);
+		}
 		return pos;
 	}
 	
