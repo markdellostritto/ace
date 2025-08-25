@@ -18,8 +18,8 @@
 class CalcCoulCut: public Calculator{
 public:
     //==== contructors/destructors ====
-	CalcCoulCut():Calculator(Calculator::Name::LJ_CUT){}
-    CalcCoulCut(double rc):Calculator(Calculator::Name::LJ_CUT,rc){}
+	CalcCoulCut():Calculator(Calculator::Name::COUL_CUT){}
+    CalcCoulCut(double rc):Calculator(Calculator::Name::COUL_CUT,rc){}
     ~CalcCoulCut(){}
 
     //==== operators ====
@@ -30,10 +30,10 @@ public:
 	void init();
 	void read(Token& token);
 	void coeff(Token& token);
-	double energy(Structure& struc, const NeighborList& nlist);
-	double energy(Structure& struc);
-	double compute(Structure& struc, const NeighborList& nlist);
-	double compute(Structure& struc);
+	double energy(Structure& struc, const NeighborList& nlist)const;
+	double energy(Structure& struc)const;
+	double compute(Structure& struc, const NeighborList& nlist)const;
+	double compute(Structure& struc)const;
 };
 
 //**********************************************
