@@ -141,7 +141,7 @@ void CalcCGemmLong::init(const Structure& struc){
 	coul_.init(struc);
 }
 
-double CalcCGemmLong::energy(Structure& struc, const NeighborList& nlist){
+double CalcCGemmLong::energy(Structure& struc, const NeighborList& nlist)const{
     if(CALC_CGEMM_LONG_PRINT_FUNC>0) std::cout<<"CalcCGemmLong::energy(const Structure&,const NeighborList&):\n";
     const double ke=units::Consts::ke()*eps_;
     // k-space
@@ -186,7 +186,7 @@ double CalcCGemmLong::energy(Structure& struc, const NeighborList& nlist){
 	return energyR+energyK;
 }
 
-double CalcCGemmLong::compute(Structure& struc, const NeighborList& nlist){
+double CalcCGemmLong::compute(Structure& struc, const NeighborList& nlist)const{
     if(CALC_CGEMM_LONG_PRINT_FUNC>0) std::cout<<"CalcCGemmLong::compute(const Structure&,const NeighborList&):\n";
 	const double ke=units::Consts::ke()*eps_;
     // k-space
@@ -196,9 +196,9 @@ double CalcCGemmLong::compute(Structure& struc, const NeighborList& nlist){
     // r-space
     const double cRep=1.0/(2.0*rRep*rRep);
     double energyR=0;
-	double energyCoul=0;
-	double energyOver=0;
-	double energyRep=0;
+	//double energyCoul=0;
+	//double energyOver=0;
+	//double energyRep=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const int ti=struc.type(i);
         const double qi=struc.charge(i);
@@ -228,7 +228,7 @@ double CalcCGemmLong::compute(Structure& struc, const NeighborList& nlist){
                         )
                     );
 				} else eCoul=ke*qi*qj*2.0/RadPI*(rgammaC_(ti,tj)-a);
-				// overlap
+                // overlap
                 const double eOver=aOver_(ti,tj)*zi*zj*fmexp(-0.5*gammaS_(ti,tj)*dr2);
 				const double fOver=gammaS_(ti,tj)*eOver;
 				// repulsion
@@ -236,18 +236,18 @@ double CalcCGemmLong::compute(Structure& struc, const NeighborList& nlist){
 				const double fRep=cRep*eRep;
 				//compute energy
 				energyR+=eCoul+eOver+eRep;
-				energyCoul+=eCoul;
-				energyOver+=eOver;
-				energyRep+=eRep;
+				//energyCoul+=eCoul;
+				//energyOver+=eOver;
+				//energyRep+=eRep;
                 //compute force
 				struc.force(i).noalias()+=(fCoul+fOver+fRep)*drv;
 			}
 		}
 	}
     energyR*=0.5;
-	energyCoul*=0.5;
-	energyOver*=0.5;
-	energyRep*=0.5;
+	//energyCoul*=0.5;
+	//energyOver*=0.5;
+	//energyRep*=0.5;
     struc.pe()+=energyR;
 	//return total energy
 	//std::cout<<"eKspace "<<energyK<<" eCoul "<<energyCoul<<" eOver "<<energyOver<<" eRep "<<energyRep<<" alpha "<<a<<"\n";
