@@ -70,8 +70,8 @@ public:
 	void init(const Structure& struc);
 	void read(Token& token);
 	void coeff(Token& token);
-	double energy(Structure& struc, const NeighborList& nlist);
-	double compute(Structure& struc, const NeighborList& nlist);
+	double energy(Structure& struc, const NeighborList& nlist)const;
+	double compute(Structure& struc, const NeighborList& nlist)const;
 };
 
 //**********************************************
