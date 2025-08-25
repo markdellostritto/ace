@@ -74,7 +74,7 @@ protected:
 	double rc2_;//cutoff radius squared
 public:
     //==== contructors/destructors ====
-	Calculator():rc_(0.0),rc2_(0.0),ntypes_(0){}
+	Calculator():name_(Name::NONE),rc_(0.0),rc2_(0.0),ntypes_(0){}
 	Calculator(Name name):name_(name),rc_(0.0),rc2_(0.0),ntypes_(0){}
 	Calculator(Name name, double rc);
 	virtual ~Calculator(){}
@@ -94,10 +94,10 @@ public:
 	virtual void init(const Structure& struc){}
 	void read(Token& token);
 	virtual void coeff(Token& token){}
-	virtual double energy(Structure& struc, const NeighborList& nlist){}
-	virtual double energy(Structure& struc){}
-	virtual double compute(Structure& struc, const NeighborList& nlist){}
-	virtual double compute(Structure& struc){}
+	virtual double energy(Structure& struc, const NeighborList& nlist)const{}
+	virtual double energy(Structure& struc)const{}
+	virtual double compute(Structure& struc, const NeighborList& nlist)const{}
+	virtual double compute(Structure& struc)const{}
 };
 
 //**********************************************
