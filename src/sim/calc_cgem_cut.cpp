@@ -102,7 +102,7 @@ void CalcCGemCut::coeff(Token& token){
 	aRep_(type,type)=aRep;
 }
 
-double CalcCGemCut::energy(Structure& struc, const NeighborList& nlist){
+double CalcCGemCut::energy(Structure& struc, const NeighborList& nlist)const{
     if(CALC_CGEM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemCut::energy(const Structure&,const NeighborList&):\n";
     const double eps0=units::Consts::eps0();
 	const double pe=1.0/(2.0*0.05*0.05);
@@ -139,7 +139,7 @@ double CalcCGemCut::energy(Structure& struc, const NeighborList& nlist){
 	return energy;
 }
 
-double CalcCGemCut::compute(Structure& struc, const NeighborList& nlist){
+double CalcCGemCut::compute(Structure& struc, const NeighborList& nlist)const{
     if(CALC_CGEM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemCut::compute(const Structure&,const NeighborList&):\n";
     const double eps0=units::Consts::eps0();
 	const double pe=1.0/(2.0*0.05*0.05);
