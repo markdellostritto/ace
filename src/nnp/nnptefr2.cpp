@@ -2031,7 +2031,7 @@ int main(int argc, char* argv[]){
 				calcCGemmLong.aRep()(nTypes-1,nTypes-1)=shell.rep;
 				//initialize the potential
 				calcCGemmLong.init();
-				std::cout<<"*************** CGEM LONG ***************\n";
+				std::cout<<"*************** CGEMM LONG ***************\n";
 				std::cout<<"lambdaC = "<<calcCGemmLong.lambdaC()<<"\n";
 				std::cout<<"lambdaS = "<<calcCGemmLong.lambdaS()<<"\n";
 				std::cout<<"eps = "<<calcCGemmLong.eps()<<"\n";
@@ -2083,9 +2083,24 @@ int main(int argc, char* argv[]){
 			std::cout<<print::buf(strbuf)<<"\n";
 			std::cout<<print::title("EXTERNAL POTENTIAL",strbuf)<<"\n";
 			if(compute.cgemm){
-				std::cout<<"STRIDE = "<<stride<<"\n";
-				std::cout<<"CGEMN  = "<<calcCGemmLong<<"\n";
-				std::cout<<"SHELL  = "<<shell.radius<<" "<<shell.amp<<" "<<shell.rep<<"\n";
+				std::cout<<"cgemm  = "<<calcCGemmLong<<"\n";
+				std::cout<<"shell  = "<<shell.radius<<" "<<shell.amp<<" "<<shell.rep<<"\n";
+				std::cout<<"stride = "<<stride<<"\n";
+				std::cout<<"nsteps = "<<nsteps<<"\n";
+				std::cout<<"ftol   = "<<ftol<<"\n";
+				std::cout<<"intg   = ";
+				if(integrator!=NULL){
+					switch(integrator->name()){
+						case Integrator::Name::QUICKMIN: std::cout<<static_cast<const Quickmin&>(*integrator)<<"\n"; break;
+						case Integrator::Name::CG: std::cout<<static_cast<const CG&>(*integrator)<<"\n"; break;
+						case Integrator::Name::FIRE: std::cout<<static_cast<const Fire&>(*integrator)<<"\n"; break;
+						case Integrator::Name::VERLET: std::cout<<static_cast<const Verlet&>(*integrator)<<"\n"; break;
+						case Integrator::Name::VSCALE: std::cout<<static_cast<const VScale&>(*integrator)<<"\n"; break;
+						case Integrator::Name::BERENDSEN: std::cout<<static_cast<const Berendsen&>(*integrator)<<"\n"; break;
+						case Integrator::Name::LANGEVIN: std::cout<<static_cast<const Langevin&>(*integrator)<<"\n"; break;
+						default: std::cout<<"NONE\n";
+					}
+				} else throw std::invalid_argument("No integrator.");
 			}
 			std::cout<<print::buf(strbuf)<<"\n";
 			std::cout<<print::title("TYPES",strbuf)<<"\n";
@@ -2113,7 +2128,7 @@ int main(int argc, char* argv[]){
 			if(nadd>0 && rdist==rng::dist::Name::NONE) throw std::invalid_argument("Invalid radial distribution.");
 			if(nadd>0 && rdelta==0) throw std::invalid_argument("Additional structures must have non-zero rdelta.");
 			if(stride<=0) throw std::invalid_argument("Invalid engine stride.");
-			if(nsteps<0) throw std::invalid_argument("Invalid number of relaxation steps.");
+			if(nsteps<=0) throw std::invalid_argument("Invalid number of relaxation steps.");
 			if(ftol<0) throw std::invalid_argument("Invalid force tolerance.");
 		}
 		
@@ -2399,7 +2414,7 @@ int main(int argc, char* argv[]){
 		// EXTERNAL POTENTIALS
 		//************************************************************************************
 		
-		//======== compute CGEM energies ========
+		//======== compute CGEMM energies ========
 		if(compute.cgemm){
 			if(WORLD.rank()==0) std::cout<<"computing CGEMM energies\n";
 			//stats
@@ -2656,9 +2671,9 @@ int main(int argc, char* argv[]){
 		// EXTERNAL POTENTIALS
 		//************************************************************************************
 		
-		//======== compute CGEM energies ========
+		//======== compute CGEMM energies ========
 		/*if(compute.cgemm){
-			if(WORLD.rank()==0) std::cout<<"computing CGEM energies\n";
+			if(WORLD.rank()==0) std::cout<<"computing CGEMM energies\n";
 			//stats
 			double tavg=0;
 			double favg=0;
@@ -3098,9 +3113,9 @@ int main(int argc, char* argv[]){
 			}
 		}
 		
-		//======== compute the final CGEM energies ========
+		//======== compute the final CGEMM energies ========
 		if(compute.cgemm && write.cgemm){
-			if(NNPTEFR_PRINT_STATUS>-1 && WORLD.rank()==0) std::cout<<"computing final CGEM energies\n";
+			if(NNPTEFR_PRINT_STATUS>-1 && WORLD.rank()==0) std::cout<<"computing final CGEMM energies\n";
 			for(int n=0; n<nData; ++n){
 				if(dist_struc[n].size()>0){
 					std::vector<double> energy_r(nstrucs[n],std::numeric_limits<double>::max());
