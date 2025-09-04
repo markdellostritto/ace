@@ -41,6 +41,9 @@ int count=0;
 bool opt_lambda=false;
 bool opt_radius=false;
 bool opt_aOver=false;
+double min_lambda=1.0e-6;
+double min_radius=1.0e-6;
+double min_aOver=1.0e-6;
 
 //*****************************************************
 // CGemmType
@@ -369,12 +372,23 @@ int main(int argc, char* argv[]){
 				opt_radius=string::boolean(token.next().c_str());
 			} else if(tag=="OPT_AOVER"){
 				opt_aOver=string::boolean(token.next().c_str());
+			} else if(tag=="MIN_LAMBDA"){
+				min_lambda=std::atof(token.next().c_str());
+			} else if(tag=="MIN_RADIUS"){
+                min_radius=std::atof(token.next().c_str());
+			} else if(tag=="MIN_AOVER"){
+                min_aOver=std::atof(token.next().c_str());
 			} 
         }
 
         //=== close the parameter file ====
         fclose(reader);
         reader=NULL;
+
+        //=== check the parameters ====
+        if(min_lambda<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid min lambda.");
+        if(min_radius<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid min radius.");
+        if(min_aOver<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid min aOver.");
         
         //==== add CGemm cut to engine ====
         std::cout<<"initializing the engine\n";
@@ -457,7 +471,10 @@ int main(int argc, char* argv[]){
         std::cout<<"miter = "<<miter<<"\n";
         std::cout<<"opt_lambda = "<<opt_lambda<<"\n";
         std::cout<<"opt_radius = "<<opt_radius<<"\n";
-        std::cout<<"opt_aOver    = "<<opt_aOver<<"\n";
+        std::cout<<"opt_aOver  = "<<opt_aOver<<"\n";
+        std::cout<<"min_lambda = "<<min_lambda<<"\n";
+        std::cout<<"min_radius = "<<min_radius<<"\n";
+        std::cout<<"min_aOver  = "<<min_aOver<<"\n";
         if(algo==nlopt::LN_SBPLX) std::cout<<"algo  = SBPLX\n";
         else if(algo==nlopt::LN_BOBYQA) std::cout<<"algo  = BOBYQA\n";
         else if(algo==nlopt::LN_COBYLA) std::cout<<"algo  = COBYLA\n";
@@ -645,11 +662,11 @@ int main(int argc, char* argv[]){
         std::vector<double> lb(dim),ub(dim),x(dim);
         c=0;
         if(opt_lambda){
-            lb[c++]=1.0e-3;
-            lb[c++]=1.0e-3;
+            lb[c++]=min_lambda;
+            lb[c++]=min_lambda;
         }
-        if(opt_radius) for(int i=0; i<ntypes; ++i) lb[c++]=1.0e-3;
-        if(opt_aOver) for(int i=0; i<ntypes; ++i) lb[c++]=1.0e-3;
+        if(opt_radius) for(int i=0; i<ntypes; ++i) lb[c++]=min_radius;
+        if(opt_aOver) for(int i=0; i<ntypes; ++i) lb[c++]=min_aOver;
         c=0;
         if(opt_lambda){
             ub[c++]=HUGE_VAL;
@@ -675,12 +692,21 @@ int main(int argc, char* argv[]){
         //==== optimize ====
         std::cout<<"optimizing\n";
 		double minf;
+        //print head
         std::printf("step error f_avg f_max t_avg t_max ");
         if(opt_lambda) std::printf("lambdaC lambdaS ");
         if(opt_radius) for(int i=0; i<types.size(); ++i) std::printf("R[%s] ",types[i].name().c_str());
         if(opt_aOver) for(int i=0; i<types.size(); ++i) std::printf("A[%s] ",types[i].name().c_str());
         std::printf("\n");
+        //optimize
 		nlopt::result result=opt.optimize(x,minf);
+        //print tail
+		std::printf("step error f_avg f_max t_avg t_max ");
+        if(opt_lambda) std::printf("lambdaC lambdaS ");
+        if(opt_radius) for(int i=0; i<types.size(); ++i) std::printf("R[%s] ",types[i].name().c_str());
+        if(opt_aOver) for(int i=0; i<types.size(); ++i) std::printf("A[%s] ",types[i].name().c_str());
+        std::printf("\n");
+        //print status
 		if(result>=0) std::cout<<"optimization successful\n";
 		
         //compute the potential
