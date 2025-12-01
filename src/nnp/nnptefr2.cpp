@@ -87,6 +87,7 @@ template <> int nbytes(const NNPTEFR& obj){
 		size+=sizeof(bool);//restart
 		size+=sizeof(bool);//reset
 		size+=sizeof(bool);//wparams
+		size+=sizeof(bool);//sparams
 	//optimization
 		size+=nbytes(obj.batcht_);
 		size+=nbytes(obj.batchv_);
@@ -128,6 +129,7 @@ template <> int pack(const NNPTEFR& obj, char* arr){
 		std::memcpy(arr+pos,&obj.restart_,sizeof(bool)); pos+=sizeof(bool);
 		std::memcpy(arr+pos,&obj.reset_,sizeof(bool)); pos+=sizeof(bool);
 		std::memcpy(arr+pos,&obj.wparams_,sizeof(bool)); pos+=sizeof(bool);
+		std::memcpy(arr+pos,&obj.sparams_,sizeof(bool)); pos+=sizeof(bool);
 	//optimization
 		pos+=pack(obj.batcht_,arr+pos);
 		pos+=pack(obj.batchv_,arr+pos);
@@ -169,6 +171,7 @@ template <> int unpack(NNPTEFR& obj, const char* arr){
 		std::memcpy(&obj.restart_,arr+pos,sizeof(bool)); pos+=sizeof(bool);
 		std::memcpy(&obj.reset_,arr+pos,sizeof(bool)); pos+=sizeof(bool);
 		std::memcpy(&obj.wparams_,arr+pos,sizeof(bool)); pos+=sizeof(bool);
+		std::memcpy(&obj.sparams_,arr+pos,sizeof(bool)); pos+=sizeof(bool);
 	//optimization
 		pos+=unpack(obj.batcht_,arr+pos);
 		pos+=unpack(obj.batchv_,arr+pos);
@@ -414,6 +417,7 @@ std::ostream& operator<<(std::ostream& out, const NNPTEFR& nnpte){
 	out<<"restart      = "<<nnpte.restart_<<"\n";
 	out<<"reset        = "<<nnpte.reset_<<"\n";
 	out<<"wparams      = "<<nnpte.wparams_<<"\n";
+	out<<"sparams      = "<<nnpte.sparams_<<"\n";
 	//optimization
 	out<<"algo         = "<<nnpte.algo_<<"\n";
 	out<<"decay        = "<<nnpte.decay_<<"\n";
@@ -456,6 +460,7 @@ void NNPTEFR::defaults(){
 		restart_=false;
 		reset_=false;
 		wparams_=false;
+		sparams_=false;
 	//optimization
 		norm_=Norm::NONE;
 		prescale_=PreScale::IDENTITY;
@@ -963,7 +968,7 @@ void NNPTEFR::train(int batchSize, const std::vector<Structure>& struc_train, co
 		rmse_t_a.resize(size);
 		rmse_v_a.resize(size);
 	}
-	params_.resize(size,Eigen::VectorXd::Zero(nParams));
+	if(sparams_) params_.resize(size,Eigen::VectorXd::Zero(nParams));
 	//print status header to standard output
 	if(WORLD.rank()==0) printf("opt gamma loss_t loss_v rmse_t rmse_v rmse_t_a rmse_v_a\n");
 	//start the clock
@@ -1008,7 +1013,7 @@ void NNPTEFR::train(int batchSize, const std::vector<Structure>& struc_train, co
 				rmse_v[t]=error_[3];
 				rmse_t_a[t]=rmse_t_a_*betaii;
 				rmse_v_a[t]=rmse_v_a_*betaii;
-				params_[t]=obj_.p();
+				if(sparams_) params_[t]=obj_.p();
 				printf("%8i %12.10e %12.10e %12.10e %12.10e %12.10e %12.10e %12.10e\n",
 					step[t],gamma[t],loss_t[t],loss_v[t],rmse_t[t],rmse_v[t],rmse_t_a[t],rmse_v_a[t]
 				);
@@ -1103,7 +1108,7 @@ void NNPTEFR::train(int batchSize, const std::vector<Structure>& struc_train, co
 	}
 	
 	//====== write the parameters ======
-	if(WORLD.rank()==0 && wparams_){
+	if(WORLD.rank()==0 && sparams_ && wparams_){
 		FILE* writer_p_=NULL;
 		if(!restart_) writer_p_=fopen(file_params_.c_str(),"w");
 		else writer_p_=fopen(file_params_.c_str(),"a");
@@ -1119,8 +1124,10 @@ void NNPTEFR::train(int batchSize, const std::vector<Structure>& struc_train, co
 	}
 
 	//====== bcast the parameters ======
-	for(int t=0; t<size; ++t){
-		MPI_Bcast(params_[t].data(),params_[t].size(),MPI_DOUBLE,0,WORLD.mpic());
+	if(sparams_){
+		for(int t=0; t<size; ++t){
+			MPI_Bcast(params_[t].data(),params_[t].size(),MPI_DOUBLE,0,WORLD.mpic());
+		}
 	}
 	
 	//====== unpack final parameters ======
@@ -1594,6 +1601,8 @@ void NNPTEFR::read(FILE* reader, NNPTEFR& nnpte){
 			nnpte.reset()=string::boolean(token.next().c_str());//restarting
 		} else if(tag=="WRITE_PARAMS"){
 			nnpte.wparams()=string::boolean(token.next().c_str());
+		} else if(tag=="SAVE_PARAMS"){
+			nnpte.sparams()=string::boolean(token.next().c_str());
 		} 
 		//optimization
 		if(tag=="LOSS"){
@@ -1653,8 +1662,13 @@ int main(int argc, char* argv[]){
 		Mode mode=Mode::TRAIN;
 	//atom format
 		Atom atom;
-		atom.name=true; atom.an=true; atom.type=true; atom.mass=true;
-		atom.posn=true; atom.force=true; atom.symm=true;
+		atom.name()=true; 
+		atom.an()=true; 
+		atom.type()=true; 
+		atom.mass()=true;
+		atom.posn()=true; 
+		atom.force()=true; 
+		atom.symm()=true;
 	//flags - compute
 		struct Compute{
 			bool force=false; //compute - forces
@@ -1950,6 +1964,7 @@ int main(int argc, char* argv[]){
 			//======== read - nnpte =========
 			if(NNPTEFR_PRINT_STATUS>0) std::cout<<"reading neural network training parameters\n";
 			NNPTEFR::read(reader,nnpte);
+			if(compute.pca) nnpte.sparams()=true;
 			
 			//======== read - annp =========
 			if(NNPTEFR_PRINT_STATUS>0) std::cout<<"reading neural network parameters\n";
@@ -2319,7 +2334,7 @@ int main(int argc, char* argv[]){
 		for(int n=0; n<nData; ++n){
 			indices[n].resize(nstrucs[n],-1);
 			for(int i=0; i<indices[n].size(); ++i) indices[n][i]=i;
-			//std::random_shuffle(indices[n].begin(),indices[n].end());
+			std::random_shuffle(indices[n].begin(),indices[n].end());
 			thread::bcast(WORLD.mpic(),0,indices[n]);
 		}
 		
@@ -2425,9 +2440,14 @@ int main(int argc, char* argv[]){
 			int nstruc=0;
 			//set the atom type
 			Atom atomCGem;
-			atomCGem.name=true; atomCGem.an=true; atomCGem.type=true;
-			atomCGem.posn=true; atomCGem.force=true; atomCGem.vel=true;
-			atomCGem.mass=true; atomCGem.charge=true; 
+			atomCGem.name()=true; 
+			atomCGem.an()=true; 
+			atomCGem.type()=true;
+			atomCGem.posn()=true; 
+			atomCGem.force()=true; 
+			atomCGem.vel()=true;
+			atomCGem.mass()=true; 
+			atomCGem.charge()=true; 
 			//set the engine
 			const int tShell=types.size();
 			const int nTypes=types.size()+1;
@@ -2548,7 +2568,7 @@ int main(int argc, char* argv[]){
 			MPI_Reduce(&tmax,&tmax_tot,1,MPI_DOUBLE,MPI_MAX,0,WORLD.mpic());
 			MPI_Reduce(&tavg,&tavg_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
 			MPI_Reduce(&favg,&favg_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
-			MPI_Reduce(&fmax,&fmax_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
+			MPI_Reduce(&fmax,&fmax_tot,1,MPI_DOUBLE,MPI_MAX,0,WORLD.mpic());
 			MPI_Reduce(&nstruc,&nstruc_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
 			if(WORLD.rank()==0){
 				tavg_tot/=nstruc_tot;
@@ -2666,213 +2686,6 @@ int main(int argc, char* argv[]){
 			std::cout<<"zero-force structures - val   : "<<fzero[1]<<"\n";
 			std::cout<<"zero-force structures - test  : "<<fzero[2]<<"\n";
 		}
-		
-		//************************************************************************************
-		// EXTERNAL POTENTIALS
-		//************************************************************************************
-		
-		//======== compute CGEMM energies ========
-		/*if(compute.cgemm){
-			if(WORLD.rank()==0) std::cout<<"computing CGEMM energies\n";
-			//stats
-			double tavg=0;
-			double favg=0;
-			double tmax=0;
-			int nstruc=0;
-			//set the atom type
-			Atom atomCGem;
-			atomCGem.name=true; atomCGem.an=true; atomCGem.type=true;
-			atomCGem.posn=true; atomCGem.force=true; atomCGem.vel=true;
-			atomCGem.mass=true; atomCGem.charge=true; 
-			//set the engine
-			const int tShell=types.size();
-			const int nTypes=types.size()+1;
-			Engine engine;
-			engine.stride()=stride;
-			engine.calcs().push_back(
-				std::make_shared<CalcCGemmLong>(calcCGemmLong)
-			);
-			engine.constraints().push_back(
-				std::make_shared<ConstraintFreeze>()
-			);
-			engine.resize(nTypes);
-			engine.init();
-			//set parameters
-			CalcCGemmLong& eCalc=static_cast<CalcCGemmLong&>(*engine.calcs().front());
-			eCalc.radius()=calcCGemmLong.radius();
-			eCalc.aOver()=calcCGemmLong.aOver();
-			eCalc.aRep()=calcCGemmLong.aRep();
-			eCalc.gammaC()=calcCGemmLong.gammaC();
-			eCalc.gammaS()=calcCGemmLong.gammaS();
-			eCalc.init();
-			//compute cgemm - original
-			for(int n=0; n<nData; ++n){
-				//strucs - original
-				for(int i=0; i<strucs_org[n].size(); i++){
-					std::cout<<"strucs_org["<<n<<"]["<<i<<"]\n";
-					//create new structure with added electrons
-					const int nCores=strucs_org[n][i].nAtoms();
-					const int nShells=nCores;
-					const int nTotal=nCores+nShells;
-					Structure struc=Structure(nTotal,atomCGem);
-					static_cast<Cell&>(struc).init(strucs_org[n][i].R());
-					//set the cores
-					for(int j=0; j<nCores; ++j){
-						struc.name(j)=strucs_org[n][i].name(j);
-						struc.type(j)=strucs_org[n][i].type(j);
-						struc.mass(j)=strucs_org[n][i].mass(j);
-						struc.posn(j)=strucs_org[n][i].posn(j);
-						struc.charge(j)=1.0;
-						struc.force(j).setZero();
-						struc.vel(j).setZero();
-					}
-					//set the shell
-					for(int j=0; j<nShells; ++j){
-						struc.name(nCores+j)="X";
-						struc.type(nCores+j)=tShell;
-						struc.mass(nCores+j)=0.1;
-						struc.posn(nCores+j)=strucs_org[n][i].posn(j);
-						struc.charge(nCores+j)=-1.0;
-						struc.force(nCores+j).setZero();
-						struc.vel(nCores+j).setZero();
-					}
-					//set the constraints
-					std::vector<int> indices;
-					for(int m=0; m<struc.nAtoms(); ++m){
-						if(struc.name(m)!="X"){
-							indices.push_back(m);
-						}
-					}
-					engine.constraints().front()->indices()=indices;
-					//compute the zero-point energy
-					engine.init(struc);
-					const double alpha=eCalc.coul().alpha();
-					double eZero=0;
-					for(int j=0; j<nCores; ++j){
-						const int tc=struc.type(j);
-						const int ts=struc.type(nCores+j);
-						eZero+=units::Consts::ke()*1.0*-1.0*2.0/RadPI*(eCalc.rgammaC()(tc,ts)-alpha);
-						eZero+=eCalc.aOver()(tc,ts)*1.0*1.0;
-					}
-					//relax the shells
-					int t=0;
-					double ftot=0;
-					for(t=0; t<nsteps; ++t){
-						//build neighbor list
-						if(t%engine.stride()==0) engine.nlist().build(struc);
-						//compute step
-						integrator->compute(struc,engine);
-						//compute total force
-						ftot=0;
-						for(int m=0; m<struc.nAtoms(); ++m){
-							ftot+=struc.force(m).squaredNorm();
-						}
-						ftot=std::sqrt(ftot/struc.nAtoms());
-						//check break condition
-						if(ftot<ftol) break;
-					}
-					tavg+=t;
-					favg+=ftot;
-					if(t>tmax) tmax=t;
-					nstruc++;
-					//compute the energy
-					const double eCoul=engine.compute(struc);
-					const double eCGem=eCoul-eZero;
-					strucs_org[n][i].ecoul()=eCGem;
-					strucs_org[n][i].pe()-=eCGem;
-					//std::cout<<"t = "<<t<<" ftot = "<<ftot<<" ezero "<<eZero<<" ecoul "<<eCoul<<" ecgem "<<eCGem<<" alpha "<<eCalc.coul().alpha()<<" natoms "<<struc.nAtoms()<<"\n";
-				}
-				//compute cgemm - total
-				for(int i=0; i<strucs_tot[n].size(); i++){
-					std::cout<<"strucs_tot["<<n<<"]["<<i<<"]\n";
-					//create new structure with added electrons
-					const int nCores=strucs_tot[n][i].nAtoms();
-					const int nShells=nCores;
-					const int nTotal=nCores+nShells;
-					Structure struc=Structure(nTotal,atomCGem);
-					static_cast<Cell&>(struc).init(strucs_tot[n][i].R());
-					//set the cores
-					for(int j=0; j<nCores; ++j){
-						struc.name(j)=strucs_tot[n][i].name(j);
-						struc.type(j)=strucs_tot[n][i].type(j);
-						struc.mass(j)=strucs_tot[n][i].mass(j);
-						struc.posn(j)=strucs_tot[n][i].posn(j);
-						struc.charge(j)=1.0;
-						struc.force(j).setZero();
-						struc.vel(j).setZero();
-					}
-					//set the shells
-					for(int j=0; j<nShells; ++j){
-						struc.name(nCores+j)="X";
-						struc.type(nCores+j)=tShell;
-						struc.mass(nCores+j)=0.1;
-						struc.posn(nCores+j)=strucs_tot[n][i].posn(j);
-						struc.charge(nCores+j)=-1.0;
-						struc.force(nCores+j).setZero();
-						struc.vel(nCores+j).setZero();
-					}
-					//set the constraints
-					std::vector<int> indices;
-					for(int m=0; m<struc.nAtoms(); ++m){
-						if(struc.name(m)!="X"){
-							indices.push_back(m);
-						}
-					}
-					engine.constraints().front()->indices()=indices;
-					//compute the zero-point energy
-					engine.init(struc);
-					const double alpha=eCalc.coul().alpha();
-					double eZero=0;
-					for(int j=0; j<nCores; ++j){
-						const int tc=struc.type(j);
-						const int ts=struc.type(nCores+j);
-						eZero+=units::Consts::ke()*1.0*-1.0*2.0/RadPI*(eCalc.rgammaC()(tc,ts)-alpha);
-						eZero+=eCalc.aOver()(tc,ts)*1.0*1.0;
-					}
-					//relax the system
-					int t=0;
-					double ftot=0;
-					for(t=0; t<10000; ++t){
-						//build neighbor list
-						engine.nlist().build(struc);
-						//compute step
-						integrator->compute(struc,engine);
-						//compute total force
-						ftot=0;
-						for(int m=0; m<struc.nAtoms(); ++m){
-							ftot+=struc.force(m).squaredNorm();
-						}
-						ftot=std::sqrt(ftot/struc.nAtoms());
-						if(ftot<1.0e-3) break;
-					}
-					tavg+=t;
-					favg+=ftot;
-					if(t>tmax) tmax=t;
-					nstruc++;
-					//compute the energy
-					const double eCoul=engine.compute(struc);
-					const double eCGem=eCoul-eZero;
-					strucs_tot[n][i].ecoul()=eCGem;
-					strucs_tot[n][i].pe()-=eCGem;
-					//std::cout<<"t = "<<t<<" ftot = "<<ftot<<" ezero "<<eZero<<" ecoul "<<eCoul<<" ecgem "<<eCGem<<" alpha "<<eCalc.coul().alpha()<<" natoms "<<struc.nAtoms()<<"\n";
-				}
-			}
-			double tavg_tot=0;
-			double tmax_tot=0;
-			double favg_tot=0;
-			int nstruc_tot=0;
-			MPI_Reduce(&tmax,&tmax_tot,1,MPI_DOUBLE,MPI_MAX,0,WORLD.mpic());
-			MPI_Reduce(&tavg,&tavg_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
-			MPI_Reduce(&favg,&favg_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
-			MPI_Reduce(&nstruc,&nstruc_tot,1,MPI_DOUBLE,MPI_SUM,0,WORLD.mpic());
-			if(WORLD.rank()==0){
-				tavg_tot/=nstruc_tot;
-				favg_tot/=nstruc_tot;
-				std::cout<<"tavg = "<<tavg_tot<<"\n";
-				std::cout<<"tmax = "<<tmax_tot<<"\n";
-				std::cout<<"favg = "<<favg_tot<<"\n";
-			}
-		}*/
 		
 		//************************************************************************************
 		// SET INPUTS
@@ -3506,7 +3319,7 @@ int main(int argc, char* argv[]){
 				std::cout<<"time - energy - train = "<<time_energy[0]<<"\n";
 				std::cout<<"time - force  - train = "<<time_force[0]<<"\n";
 				if(compute.cgemm){
-				std::cout<<"time - cgemm - train  = "<<time_cgemm[0]<<"\n";
+				std::cout<<"time - cgemm  - train = "<<time_cgemm[0]<<"\n";
 				}
 			}
 			if(strucs_org[1].size()>0){
@@ -3514,7 +3327,7 @@ int main(int argc, char* argv[]){
 				std::cout<<"time - energy - val   = "<<time_energy[1]<<"\n";
 				std::cout<<"time - force  - val   = "<<time_force[1]<<"\n";
 				if(compute.cgemm){
-				std::cout<<"time - cgemm - val    = "<<time_cgemm[1]<<"\n";
+				std::cout<<"time - cgemm  - val   = "<<time_cgemm[1]<<"\n";
 				}
 			}
 			if(strucs_org[2].size()>0){
@@ -3522,7 +3335,7 @@ int main(int argc, char* argv[]){
 				std::cout<<"time - energy - test  = "<<time_energy[2]<<"\n";
 				std::cout<<"time - force  - test  = "<<time_force[2]<<"\n";
 				if(compute.cgemm){
-				std::cout<<"time - cgemm - test   = "<<time_cgemm[2]<<"\n";
+				std::cout<<"time - cgemm  - test  = "<<time_cgemm[2]<<"\n";
 				}
 			}
 			std::cout<<"time - wall           = "<<time_wall<<"\n";

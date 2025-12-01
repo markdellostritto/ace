@@ -234,6 +234,7 @@ public:
 		bool restart_; //flag - whether to restart
 		bool reset_;   //flag - whether to reset optimization
 		bool wparams_; //flag - whether to write the parameters to file
+		bool sparams_; //flag - whether to save the parameters
 	//batch
 		std::vector<double> normt_;
 		std::vector<double> normv_;
@@ -301,6 +302,8 @@ public:
 		const bool& reset()const{return reset_;}
 		bool& wparams(){return wparams_;}
 		const bool& wparams()const{return wparams_;}
+		bool& sparams(){return sparams_;}
+		const bool& sparams()const{return sparams_;}
 	//nnp
 		NNP& nnp(){return nnp_;}
 		const NNP& nnp()const{return nnp_;}
