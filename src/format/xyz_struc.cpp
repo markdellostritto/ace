@@ -74,6 +74,7 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 	int ni=-1; int qi=-1; int mi=-1;
 	Eigen::Vector3i ri=Eigen::Vector3i::Constant(-1);
 	Eigen::Vector3i fi=Eigen::Vector3i::Constant(-1);
+	Eigen::Vector3i di=Eigen::Vector3i::Constant(-1);
 	fgets(input,string::M,reader);
 	string::to_upper(input);
 	if(std::strstr(input,"PROPERTIES")!=NULL){
@@ -94,14 +95,18 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 				if(proptok.next()!="R") throw std::runtime_error(funcame+": invalid charge data type.");
 				else if(std::atoi(proptok.next().c_str())!=1) throw std::runtime_error(funcame+": invalid charge length.");
 				else mi=ndata++;
-			} else if(tag=="POS"){
+			} else if(tag=="POS" || tag=="POSITION"){
 				if(proptok.next()!="R") throw std::runtime_error(funcame+": invalid position data type.");
 				else if(std::atoi(proptok.next().c_str())!=3) throw std::runtime_error(funcame+": invalid position length.");
 				else for(int i=0; i<3; ++i) ri[i]=ndata++;
-			} else if(tag=="FORCES"){
+			} else if(tag=="FORCES" || tag=="FORCE"){
 				if(proptok.next()!="R") throw std::runtime_error(funcame+": invalid force data type.");
 				else if(std::atoi(proptok.next().c_str())!=3) throw std::runtime_error(funcame+": invalid force length.");
 				else for(int i=0; i<3; ++i) fi[i]=ndata++;
+			} else if(tag=="DIPOLE" || tag=="DIPOLES"){
+				if(proptok.next()!="R") throw std::runtime_error(funcame+": invalid dipole data type.");
+				else if(std::atoi(proptok.next().c_str())!=3) throw std::runtime_error(funcame+": invalid dipole length.");
+				else for(int i=0; i<3; ++i) di[i]=ndata++;
 			} 
 		}
 	}
@@ -135,24 +140,29 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 		int c=0;
 		token.read(fgets(input,string::M,reader),string::WS);
 		while(!token.end()) sarr[c++]=token.next();
-		if(struc.atom().name && ni>=0){
+		if(struc.atom().name() && ni>=0){
 			struc.name(i)=sarr[ni];
 		} 
-		if(struc.atom().charge && qi>=0){
+		if(struc.atom().charge() && qi>=0){
 			struc.charge(i)=std::atof(sarr[qi].c_str());
 		}
-		if(struc.atom().mass && mi>=0){
+		if(struc.atom().mass() && mi>=0){
 			struc.mass(i)=std::atof(sarr[mi].c_str());
 		}
-		if(struc.atom().posn && ri.minCoeff()>=0){
+		if(struc.atom().posn() && ri.minCoeff()>=0){
 			struc.posn(i)[0]=std::atof(sarr[ri[0]].c_str())*s_len;
 			struc.posn(i)[1]=std::atof(sarr[ri[1]].c_str())*s_len;
 			struc.posn(i)[2]=std::atof(sarr[ri[2]].c_str())*s_len;
 		}
-		if(struc.atom().force && fi.minCoeff()>=0){
+		if(struc.atom().force() && fi.minCoeff()>=0){
 			struc.force(i)[0]=std::atof(sarr[fi[0]].c_str())*s_energy/s_len;
 			struc.force(i)[1]=std::atof(sarr[fi[1]].c_str())*s_energy/s_len;
 			struc.force(i)[2]=std::atof(sarr[fi[2]].c_str())*s_energy/s_len;
+		}
+		if(struc.atom().dipole() && di.minCoeff()>=0){
+			struc.dipole(i)[0]=std::atof(sarr[di[0]].c_str())*s_len;
+			struc.dipole(i)[1]=std::atof(sarr[di[1]].c_str())*s_len;
+			struc.dipole(i)[2]=std::atof(sarr[di[2]].c_str())*s_len;
 		}
 	}
 
@@ -170,7 +180,7 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 	struc.pe()=s_energy*pe;
 	
 	//set an
-	if(atom.an && atom.name){
+	if(atom.an() && atom.name()){
 		for(int i=0; i<nAtoms; ++i){
 			struc.an(i)=ptable::an(struc.name(i).c_str());
 		}
@@ -178,11 +188,11 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 	
 	//set mass
 	if(mi<0){
-		if(atom.an && atom.mass){
+		if(atom.an() && atom.mass()){
 			for(int i=0; i<nAtoms; ++i){
 				struc.mass(i)=ptable::mass(struc.an(i))*s_mass;
 			}
-		} else if(atom.name && atom.mass){
+		} else if(atom.name() && atom.mass()){
 			for(int i=0; i<nAtoms; ++i){
 				const int an=ptable::an(struc.name(i).c_str());
 				struc.mass(i)=ptable::mass(an)*s_mass;
@@ -191,11 +201,11 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 	}
 	
 	//set radius
-	if(atom.an && atom.radius){
+	if(atom.an() && atom.radius()){
 		for(int i=0; i<nAtoms; ++i){
 			struc.radius(i)=ptable::radius_covalent(struc.an(i));
 		}
-	} else if(atom.name && atom.radius){
+	} else if(atom.name() && atom.radius()){
 		for(int i=0; i<nAtoms; ++i){
 			const int an=ptable::an(struc.name(i).c_str());
 			struc.radius(i)=ptable::radius_covalent(an);
@@ -203,7 +213,7 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 	}
 
 	//set the type
-	if(atom.name && atom.type){
+	if(atom.name() && atom.type()){
 		std::vector<std::string> names;
 		int ntypes=0;
 		for(int i=0; i<nAtoms; ++i){
@@ -247,7 +257,7 @@ void write(FILE* writer, const Atom& atom, const Structure& struc){
 	if(XYZ_PRINT_FUNC>0) std::cout<<"write(const char*,const Atom&,const Structure&):\n";
 	fprintf(writer,"%i\n",struc.nAtoms());
 	const Eigen::Matrix3d& R=struc.R();
-	if(atom.force){
+	if(atom.force()){
 		fprintf(writer,"Properties=species:S:1:pos:R:3:forces:R:3 potential_energy=%f pbc=\"T T T\" Lattice=\"%f %f %f %f %f %f %f %f %f\"\n",
 			struc.pe(),R(0,0),R(1,0),R(2,0),R(0,1),R(1,1),R(1,2),R(0,2),R(1,2),R(2,2)
 		);
