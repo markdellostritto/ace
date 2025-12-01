@@ -23,8 +23,10 @@ public:
 			LJ_CUT,
 			COUL_CUT,
 			COUL_LONG,
-			CGEM_CUT,
-			CGEM_LONG,
+			DIPOLE_CUT,
+			DIPOLE_LONG,
+			THOLE_CUT,
+			THOLE_LONG,
 			CGEMM_CUT,
 			CGEMM_LONG,
 			NONE
@@ -89,7 +91,7 @@ public:
 	const int& ntypes()const{return ntypes_;}
 	
 	//==== member functions ====
-    virtual void resize(int ntypes){ntypes_=ntypes;}
+    virtual void resize(int ntypes);
 	virtual void init(){}
 	virtual void init(const Structure& struc){}
 	void read(Token& token);

@@ -11,8 +11,10 @@ Calculator::Name Calculator::Name::read(const char* str){
 	if(std::strcmp(str,"LJ_CUT")==0) return Calculator::Name::LJ_CUT;
 	else if(std::strcmp(str,"COUL_CUT")==0) return Calculator::Name::COUL_CUT;
 	else if(std::strcmp(str,"COUL_LONG")==0) return Calculator::Name::COUL_LONG;
-	else if(std::strcmp(str,"CGEM_CUT")==0) return Calculator::Name::CGEM_CUT;
-	else if(std::strcmp(str,"CGEM_LONG")==0) return Calculator::Name::CGEM_LONG;
+	else if(std::strcmp(str,"DIPOLE_CUT")==0) return Calculator::Name::DIPOLE_CUT;
+	else if(std::strcmp(str,"DIPOLE_LONG")==0) return Calculator::Name::DIPOLE_LONG;
+	else if(std::strcmp(str,"THOLE_CUT")==0) return Calculator::Name::THOLE_CUT;
+	else if(std::strcmp(str,"THOLE_LONG")==0) return Calculator::Name::THOLE_LONG;
 	else if(std::strcmp(str,"CGEMM_CUT")==0) return Calculator::Name::CGEMM_CUT;
 	else if(std::strcmp(str,"CGEMM_LONG")==0) return Calculator::Name::CGEMM_LONG;
 	else return Calculator::Name::NONE;
@@ -23,8 +25,10 @@ const char* Calculator::Name::name(const Calculator::Name& t){
 		case Calculator::Name::LJ_CUT: return "LJ_CUT";
 		case Calculator::Name::COUL_CUT: return "COUL_CUT";
 		case Calculator::Name::COUL_LONG: return "COUL_LONG";
-		case Calculator::Name::CGEM_CUT: return "CGEM_CUT";
-		case Calculator::Name::CGEM_LONG: return "CGEM_LONG";
+		case Calculator::Name::DIPOLE_CUT: return "DIPOLE_CUT";
+		case Calculator::Name::DIPOLE_LONG: return "DIPOLE_LONG";
+		case Calculator::Name::THOLE_CUT: return "THOLE_CUT";
+		case Calculator::Name::THOLE_LONG: return "THOLE_LONG";
 		case Calculator::Name::CGEMM_CUT: return "CGEMM_CUT";
 		case Calculator::Name::CGEMM_LONG: return "CGEMM_LONG";
 		default: return "NONE";
@@ -36,8 +40,10 @@ std::ostream& operator<<(std::ostream& out, const Calculator::Name& t){
 		case Calculator::Name::LJ_CUT: out<<"LJ_CUT"; break;
 		case Calculator::Name::COUL_CUT: out<<"COUL_CUT"; break;
 		case Calculator::Name::COUL_LONG: out<<"COUL_LONG"; break;
-		case Calculator::Name::CGEM_CUT: out<<"CGEM_CUT"; break;
-		case Calculator::Name::CGEM_LONG: out<<"CGEM_LONG"; break;
+		case Calculator::Name::DIPOLE_CUT: out<<"DIPOLE_CUT"; break;
+		case Calculator::Name::DIPOLE_LONG: out<<"DIPOLE_LONG"; break;
+		case Calculator::Name::THOLE_CUT: out<<"THOLE_CUT"; break;
+		case Calculator::Name::THOLE_LONG: out<<"THOLE_LONG"; break;
 		case Calculator::Name::CGEMM_CUT: out<<"CGEMM_CUT"; break;
 		case Calculator::Name::CGEMM_LONG: out<<"CGEMM_LONG"; break;
 		default: out<<"NONE"; break;
@@ -88,6 +94,11 @@ std::ostream& operator<<(std::ostream& out, const Calculator& calc){
 }
 
 //==== member functions ====
+
+void Calculator::resize(int ntypes){
+	if(ntypes<0) throw std::invalid_argument("Calculator::resize(int): Invalid number of types.");
+	ntypes_=ntypes;
+}
 
 void Calculator::read(Token& token){
 	//calculator name rc 6.0 ...
