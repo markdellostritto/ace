@@ -24,15 +24,16 @@
 
 class CGemmType{
 private:
-    std::string name_;
-    double radius_;
-    double aOver_;
-    double aRep_;
-    double mass_;
-    int index_;
+    std::string name_{"NONE"};
+    double radius_{0.0};
+    double rvdw_{0.0};
+    double aOver_{0.0};
+    double aRep_{0.0};
+    double mass_{0.0};
+    int index_{-1};
 public:
     //==== constructors/destructors ====
-    CGemmType();
+    CGemmType(){}
     ~CGemmType(){}
 
     //==== operators ====
@@ -43,6 +44,8 @@ public:
     const std::string& name()const{return name_;}
     double& radius(){return radius_;}
     const double& radius()const{return radius_;}
+    double& rvdw(){return rvdw_;}
+    const double& rvdw()const{return rvdw_;}
     double& aOver(){return aOver_;}
     const double& aOver()const{return aOver_;}
     double& aRep(){return aRep_;}

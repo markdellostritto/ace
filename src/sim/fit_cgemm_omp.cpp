@@ -18,7 +18,7 @@
 // format
 #include "format/cube_struc.hpp"
 //sim
-#include "sim/fit_cgemm.hpp"
+#include "sim/fit_cgemm_omp.hpp"
 #include "sim/constraint_freeze.hpp"
 #include "sim/calc_factory.hpp"
 #include "sim/constraint_factory.hpp"
@@ -41,28 +41,24 @@ int count=0;
 bool opt_lambda=false;
 bool opt_radius=false;
 bool opt_aOver=false;
+bool opt_rRep=false;
+bool opt_weight=false;
+double sigma=1.0;
 double min_lambda=1.0e-6;
 double min_radius=1.0e-6;
 double min_aOver=1.0e-6;
+double max_lambda=HUGE_VAL;
+double max_radius=HUGE_VAL;
+double max_aOver=HUGE_VAL;
 
 //*****************************************************
 // CGemmType
 //*****************************************************
 
-//==== constructors/destructors ====
-
-CGemmType::CGemmType(){
-    name_="NONE";
-    radius_=0;
-    aOver_=0;
-    aRep_=0;
-    index_=-1;    
-}
-
 //==== operators ====
 
 std::ostream& operator<<(std::ostream& out, const CGemmType& type){
-    return out<<type.name()<<" "<<type.index()<<" "<<type.radius()<<" "<<type.aOver()<<" "<<type.aRep();
+    return out<<type.name()<<" "<<type.index()<<" "<<type.radius()<<" "<<type.rvdw()<<" "<<type.aOver()<<" "<<type.aRep();
 }
 
 //==== member functions ====
@@ -71,10 +67,12 @@ void CGemmType::read(Token& token){
     name_=token.next();
     mass_=std::atof(token.next().c_str());
     radius_=std::atof(token.next().c_str());
+    rvdw_=std::atof(token.next().c_str());
     aOver_=std::atof(token.next().c_str());
     aRep_=std::atof(token.next().c_str());
-    if(radius_<0) throw std::invalid_argument("CGemmType::read(Token&): invalid mass.");
+    if(mass_<0) throw std::invalid_argument("CGemmType::read(Token&): invalid mass.");
     if(radius_<0) throw std::invalid_argument("CGemmType::read(Token&): invalid radius.");
+    if(rvdw_<0) throw std::invalid_argument("CGemmType::read(Token&): invalid rvdw.");
     if(aOver_<0) throw std::invalid_argument("CGemmType::read(Token&): invalid overlap amplitude.");
     if(aRep_<0) throw std::invalid_argument("CGemmType::read(Token&): invalid repulsive amplitude.");
 }
@@ -86,7 +84,6 @@ void CGemmType::read(Token& token){
 double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData){
     FunctionData& fData_=*((FunctionData*)fData);
     const int ntypes=fData_.types.size();
-    //std::cout<<"x = "; for(int i=0; i<x.size(); ++i) std::cout<<x[i]<<" "; std::cout<<"\n";
     int c;
     
     //==== unpack the parameters - CGemm ====
@@ -103,6 +100,7 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
     if(opt_aOver) for(int i=0; i<ntypes; ++i) calcCGemmCut.aOver()(i,i)=x[c++];
     else for(int i=0; i<ntypes; ++i) calcCGemmCut.aOver()(i,i)=fData_.types[i].aOver();
     for(int i=0; i<ntypes; ++i) calcCGemmCut.aRep()(i,i)=fData_.types[i].aRep();
+    if(opt_rRep) calcCGemmCut.rRep()=x[c++];
     calcCGemmCut.init();
 
     //==== unpack the parameters - types ====
@@ -110,6 +108,7 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
     if(opt_lambda) c+=2;
     if(opt_radius) for(int i=0; i<ntypes; ++i) fData_.types[i].radius()=x[c++];
     if(opt_aOver) for(int i=0; i<ntypes; ++i) fData_.types[i].aOver()=x[c++];
+    if(opt_rRep) c+=1;
     
     //==== loop over each structure ====
     Engine& engine=fData_.engine;
@@ -158,6 +157,9 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
             dev+=(avg-strucA.posn(j)).squaredNorm();
         }
         dev=std::sqrt(dev/nCores);
+        //std::cout<<"struc "<<n<<"\n";
+        //std::cout<<"avg = "<<avg.transpose()<<"\n";
+        //std::cout<<"dev = "<<dev<<"\n";
         //set the electron positions
         if(nShells<nCores){
             for(int j=0; j<nShells; ++j){
@@ -171,8 +173,29 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
             //add extra electrons to random posns near the center
             for(int j=nCores; j<nShells; ++j){
                 strucN.posn(nCores+j)=avg;
-                strucN.posn(nCores+j).noalias()+=dev*Eigen::Vector3d::Random();
+                strucN.posn(nCores+j).noalias()+=1.0*dev*Eigen::Vector3d::Random();
             }
+            /*const int nExtra=nShells-nCores;
+            const int nAttempts=10;
+            //std::cout<<"nExtra = "<<nExtra<<"\n";
+            std::vector<int> cores(nExtra,-1);
+            int icore=0;
+            for(int j=nCores; j<nShells; ++j){
+                //choose core
+                bool match=false;
+                for(int ii=0; ii<nAttempts; ++ii){
+                    cores[icore]=std::rand()%nCores;
+                    for(int i=0; i<icore; ++i){
+                        if(cores[icore]==cores[i]){
+                            match=true; break;
+                        }
+                    }
+                    if(!match) break;
+                }
+                strucN.posn(nCores+j)=strucA.posn(icore);
+                strucN.posn(nCores+j).noalias()+=0.1*Eigen::Vector3d::Random();
+                ++icore;
+            }*/
         }
 
         //relax the system
@@ -183,6 +206,7 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
                     <<" "<<strucN.type(m)
                     <<" "<<strucN.charge(m)
                     <<" "<<fData_.types[strucN.type(m)].radius()
+                    <<" "<<fData_.types[strucN.type(m)].rvdw()
                     <<" "<<fData_.types[strucN.type(m)].aOver()
                     <<" "<<fData_.types[strucN.type(m)].aRep()
                     <<" "<<strucN.posn(m).transpose()
@@ -214,6 +238,7 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
                     <<" "<<strucN.type(m)
                     <<" "<<strucN.charge(m)
                     <<" "<<fData_.types[strucN.type(m)].radius()
+                    <<" "<<fData_.types[strucN.type(m)].rvdw()
                     <<" "<<fData_.types[strucN.type(m)].aOver()
                     <<" "<<fData_.types[strucN.type(m)].aRep()
                     <<" "<<strucN.posn(m).transpose()
@@ -245,8 +270,22 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
         for(int i=0; i<npts[0]; ++i){
             for(int j=0; j<npts[1]; ++j){
                 for(int k=0; k<npts[2]; ++k){
+                    //compute the grid position
+                    const Eigen::Vector3d indexD=(Eigen::Vector3d()<<i,j,k).finished();
+                    const Eigen::Vector3d r=espA.origin()+espA.voxel()*indexD;
+                    //compute the difference
                     const double diff=espA.data(i,j,k)-espN.data(i,j,k);
-                    error+=std::fabs(diff);
+                    //compute the weight
+                    double w=1;
+                    if(opt_weight){
+                        for(int m=0; m<strucN.nAtoms(); ++m){
+                            const double dr=(r-strucN.posn(m)).norm();
+                            const double Rvdw=fData_.types[strucN.type(m)].rvdw();
+                            w*=0.5*(tanh((dr-Rvdw)/sigma)+1.0);
+                        }
+                    }
+                    //compute the error
+                    error+=std::fabs(w*diff);
                 }
             }
         }
@@ -257,7 +296,6 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
     f_avg/=fData_.data.size();
     
     //==== print error ====
-    //std::cout<<"step "<<step<<" error "<<error<<" f_avg "<<f_avg<<" f_max "<<f_max<<" t_avg "<<t_avg<<" t_max "<<t_max<<"\n";
     std::printf(
         "%4i %10.6e %10.6e %10.6e %7i %7i",
         step,error,f_avg,f_max,
@@ -288,9 +326,14 @@ int main(int argc, char* argv[]){
         Token token;
     //atom
         Atom atom;
-        atom.name=true; atom.type=true; atom.an=true;
-        atom.charge=true; atom.mass=true; 
-        atom.posn=true; atom.force=true; atom.vel=true;
+        atom.name()=true; 
+        atom.type()=true; 
+        atom.an()=true;
+        atom.charge()=true; 
+        atom.mass()=true; 
+        atom.posn()=true; 
+        atom.force()=true; 
+        atom.vel()=true;
     //cube files
         std::string cubelist;
         std::vector<std::string> cubefiles;
@@ -299,9 +342,11 @@ int main(int argc, char* argv[]){
         double rc=0;//cutoff
         double lambdaC=1.0;//initial guess for lambdaC
         double lambdaS=1.0;//initial guess for lambdaS
+        double rRep=0.05;
         double tol=0.0;
         int miter=0;
         nlopt::algorithm algo;
+        double rvdwc=1.0;
     //function data
         FunctionData functionData;
         std::vector<CubeData>& data=functionData.data;
@@ -360,6 +405,8 @@ int main(int argc, char* argv[]){
 			} else if(tag=="ALGO"){
                 std::string salgo=string::to_upper(token.next());
                 if(salgo=="CRS") algo=nlopt::GN_CRS2_LM;
+                else if(salgo=="ISRES") algo=nlopt::GN_ISRES;
+                else if(salgo=="ESCH") algo=nlopt::GN_ESCH;
                 else if(salgo=="SBPLX") algo=nlopt::LN_SBPLX;
                 else if(salgo=="BOBYQA") algo=nlopt::LN_BOBYQA;
                 else if(salgo=="COBYLA") algo=nlopt::LN_COBYLA;
@@ -372,12 +419,28 @@ int main(int argc, char* argv[]){
 				opt_radius=string::boolean(token.next().c_str());
 			} else if(tag=="OPT_AOVER"){
 				opt_aOver=string::boolean(token.next().c_str());
+			} else if(tag=="OPT_RREP"){
+				opt_rRep=string::boolean(token.next().c_str());
+			} else if(tag=="OPT_WEIGHT" || tag=="OPT_WEIGHTED"){
+				opt_weight=string::boolean(token.next().c_str());
 			} else if(tag=="MIN_LAMBDA"){
 				min_lambda=std::atof(token.next().c_str());
 			} else if(tag=="MIN_RADIUS"){
                 min_radius=std::atof(token.next().c_str());
 			} else if(tag=="MIN_AOVER"){
                 min_aOver=std::atof(token.next().c_str());
+			} else if(tag=="MAX_LAMBDA"){
+				max_lambda=std::atof(token.next().c_str());
+			} else if(tag=="MAX_RADIUS"){
+                max_radius=std::atof(token.next().c_str());
+			} else if(tag=="MAX_AOVER"){
+                max_aOver=std::atof(token.next().c_str());
+			} else if(tag=="RREP"){
+                rRep=std::atof(token.next().c_str());
+			} else if(tag=="SIGMA"){
+                sigma=std::atof(token.next().c_str());
+			} else if(tag=="RVDWC"){
+                rvdwc=std::atof(token.next().c_str());
 			} 
         }
 
@@ -389,6 +452,12 @@ int main(int argc, char* argv[]){
         if(min_lambda<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid min lambda.");
         if(min_radius<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid min radius.");
         if(min_aOver<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid min aOver.");
+        if(max_lambda<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max lambda.");
+        if(max_radius<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max radius.");
+        if(max_aOver<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max aOver.");
+        if(rRep<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid rRep.");
+        if(sigma<=0.0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid sigma.");
+        if(rvdwc<=0.0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid rvdwc.");
         
         //==== add CGemm cut to engine ====
         std::cout<<"initializing the engine\n";
@@ -401,7 +470,8 @@ int main(int argc, char* argv[]){
         );
         engine.resize(ntypes);
         engine.init();
-
+        static_cast<CalcCGemmCut&>(*engine.calcs().back()).rRep()=rRep;
+        
         //==== make the type map ====
         std::cout<<"making the type map\n";
         std::map<std::string,int> type_map;
@@ -429,6 +499,7 @@ int main(int argc, char* argv[]){
         if(opt_lambda) dim+=2;
         if(opt_radius) dim+=ntypes;
         if(opt_aOver) dim+=ntypes;
+        if(opt_rRep) dim+=1;
         std::cout<<print::buf(strbuf)<<"\n";
 		std::cout<<print::title("MATHEMATICAL CONSTANTS",strbuf)<<"\n";
 		std::printf("PI     = %.15f\n",math::constants::PI);
@@ -454,7 +525,7 @@ int main(int argc, char* argv[]){
 		std::cout<<print::buf(strbuf)<<"\n";
 		std::cout<<print::title("CUBE FILES",strbuf)<<"\n";
         for(int i=0; i<cubefiles.size(); ++i){
-            std::cout<<cubefiles[i]<<" "<<qtot[i]<<"\n";
+            std::cout<<i<<" "<<cubefiles[i]<<" "<<qtot[i]<<"\n";
         }
         std::cout<<print::buf(strbuf)<<"\n";
         std::cout<<engine<<"\n";
@@ -462,19 +533,27 @@ int main(int argc, char* argv[]){
         std::cout<<"rcut     = "<<rc<<"\n";
         std::cout<<"lambdaC  = "<<lambdaC<<"\n";
         std::cout<<"lambdaS  = "<<lambdaS<<"\n";
+        std::cout<<"rrep     = "<<rRep<<"\n";
         std::cout<<"nsteps   = "<<functionData.nsteps<<"\n";
         std::cout<<"ftol     = "<<functionData.ftol<<"\n";
         std::cout<<print::buf(strbuf)<<"\n";
 		std::cout<<print::title("OPT",strbuf)<<"\n";
-        std::cout<<"dim   = "<<dim<<"\n";
-        std::cout<<"tol   = "<<tol<<"\n";
-        std::cout<<"miter = "<<miter<<"\n";
+        std::cout<<"dim        = "<<dim<<"\n";
+        std::cout<<"tol        = "<<tol<<"\n";
+        std::cout<<"miter      = "<<miter<<"\n";
         std::cout<<"opt_lambda = "<<opt_lambda<<"\n";
         std::cout<<"opt_radius = "<<opt_radius<<"\n";
         std::cout<<"opt_aOver  = "<<opt_aOver<<"\n";
+        std::cout<<"opt_rRep   = "<<opt_rRep<<"\n";
+        std::cout<<"opt_weight = "<<opt_weight<<"\n";
         std::cout<<"min_lambda = "<<min_lambda<<"\n";
         std::cout<<"min_radius = "<<min_radius<<"\n";
         std::cout<<"min_aOver  = "<<min_aOver<<"\n";
+        std::cout<<"max_lambda = "<<max_lambda<<"\n";
+        std::cout<<"max_radius = "<<max_radius<<"\n";
+        std::cout<<"max_aOver  = "<<max_aOver<<"\n";
+        std::cout<<"sigma      = "<<sigma<<"\n";
+        std::cout<<"rvdwc      = "<<rvdwc<<"\n";
         if(algo==nlopt::LN_SBPLX) std::cout<<"algo  = SBPLX\n";
         else if(algo==nlopt::LN_BOBYQA) std::cout<<"algo  = BOBYQA\n";
         else if(algo==nlopt::LN_COBYLA) std::cout<<"algo  = COBYLA\n";
@@ -506,8 +585,7 @@ int main(int argc, char* argv[]){
         std::cout<<"setting random\n";
         std::mt19937 rngen=std::mt19937(std::chrono::system_clock::now().time_since_epoch().count());
         std::uniform_real_distribution<double> dist_pos(0.1,1.0);
-        std::uniform_real_distribution<double> dist_uni(-1.0,1.0);
-
+        
         //==== check the types ====
         std::cout<<"checking the types\n";
         int eIndex=-1;
@@ -516,10 +594,14 @@ int main(int argc, char* argv[]){
                 eIndex=i; break;
             }
             if(types[i].radius()<=0.0) throw std::invalid_argument("Invalid radius.");
+            if(types[i].rvdw()<=0.0) throw std::invalid_argument("Invalid rvdw.");
             if(types[i].aOver()<0.0) throw std::invalid_argument("Invalid overlap amplitude.");
             if(types[i].aRep()<0.0) throw std::invalid_argument("Invalid repulsive amplitude.");
         }
-        if(eIndex<0) throw std::invalid_argument("No electron X found in types.");
+        for(int i=0; i<types.size(); ++i){
+            types[i].rvdw()*=rvdwc;
+        }
+        if(eIndex<0) throw std::invalid_argument("No electron element name \"X\" found in type list.");
 
         //==== read the cube files ====
         std::cout<<"reading the cube files\n";
@@ -661,26 +743,20 @@ int main(int argc, char* argv[]){
         int c;
         std::vector<double> lb(dim),ub(dim),x(dim);
         c=0;
-        if(opt_lambda){
-            lb[c++]=min_lambda;
-            lb[c++]=min_lambda;
-        }
+        if(opt_radius) for(int i=0; i<2; ++i) lb[c++]=min_lambda;
         if(opt_radius) for(int i=0; i<ntypes; ++i) lb[c++]=min_radius;
         if(opt_aOver) for(int i=0; i<ntypes; ++i) lb[c++]=min_aOver;
+        if(opt_rRep) lb[c++]=min_radius;
         c=0;
-        if(opt_lambda){
-            ub[c++]=HUGE_VAL;
-            ub[c++]=HUGE_VAL;
-        }
-        if(opt_radius) for(int i=0; i<ntypes; ++i) ub[c++]=HUGE_VAL;
-        if(opt_aOver) for(int i=0; i<ntypes; ++i) ub[c++]=HUGE_VAL;
+        if(opt_lambda) for(int i=0; i<2; ++i) ub[c++]=max_lambda;
+        if(opt_radius) for(int i=0; i<ntypes; ++i) ub[c++]=max_radius;
+        if(opt_aOver) for(int i=0; i<ntypes; ++i) ub[c++]=max_aOver;
+        if(opt_rRep) ub[c++]=max_radius;
         c=0;
-        if(opt_lambda){
-            x[c++]=dist_pos(rngen);
-            x[c++]=dist_pos(rngen);
-        }
+        if(opt_lambda) for(int i=0; i<2; ++i) x[c++]=dist_pos(rngen);
         if(opt_radius) for(int i=0; i<ntypes; ++i) x[c++]=dist_pos(rngen);
         if(opt_aOver) for(int i=0; i<ntypes; ++i) x[c++]=dist_pos(rngen);
+        if(opt_rRep) x[c++]=dist_pos(rngen);
         
         nlopt::opt opt(algo,(unsigned int)dim);
         opt.set_min_objective(objf,&functionData);
@@ -697,6 +773,7 @@ int main(int argc, char* argv[]){
         if(opt_lambda) std::printf("lambdaC lambdaS ");
         if(opt_radius) for(int i=0; i<types.size(); ++i) std::printf("R[%s] ",types[i].name().c_str());
         if(opt_aOver) for(int i=0; i<types.size(); ++i) std::printf("A[%s] ",types[i].name().c_str());
+        if(opt_rRep) std::printf("rRep ");
         std::printf("\n");
         //optimize
 		nlopt::result result=opt.optimize(x,minf);
@@ -705,6 +782,7 @@ int main(int argc, char* argv[]){
         if(opt_lambda) std::printf("lambdaC lambdaS ");
         if(opt_radius) for(int i=0; i<types.size(); ++i) std::printf("R[%s] ",types[i].name().c_str());
         if(opt_aOver) for(int i=0; i<types.size(); ++i) std::printf("A[%s] ",types[i].name().c_str());
+        if(opt_rRep) std::printf("rRep ");
         std::printf("\n");
         //print status
 		if(result>=0) std::cout<<"optimization successful\n";
