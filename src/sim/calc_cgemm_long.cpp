@@ -13,34 +13,12 @@ using math::constants::RadPI;
 using math::constants::ZERO;
 using math::special::fmexp;
 
-//==== constants ====
-
-const double CalcCGemmLong::rRep=0.05;
-
 //==== contructors/destructors ====
-
-CalcCGemmLong::CalcCGemmLong():Calculator(Calculator::Name::CGEMM_LONG){
-    mix_=Calculator::Mix::HARMONIC;
-    lambdaC_=1.0;
-    lambdaS_=1.0;
-    eps_=1.0;
-    prec_=1.0e-6;
-}
-
-CalcCGemmLong::CalcCGemmLong(double rc):Calculator(Calculator::Name::CGEMM_LONG,rc){
-    mix_=Calculator::Mix::HARMONIC;
-    lambdaC_=1.0;
-    lambdaS_=1.0;
-    eps_=1.0;
-    prec_=1.0e-6;
-}
 
 CalcCGemmLong::CalcCGemmLong(double rc, double lambdaC, double lambdaS):Calculator(Calculator::Name::CGEMM_LONG,rc){
     mix_=Calculator::Mix::HARMONIC;
 	lambdaC_=lambdaC;
     lambdaS_=lambdaS;
-	eps_=1.0;
-    prec_=1.0e-6;
     if(lambdaC_<=0) throw std::invalid_argument("CalcCGemmLong::CalcCGemmLong(double,double,double): Invalid lambdaC\n");
     if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmLong::CalcCGemmLong(double,double,double): Invalid lambdaS\n");
 }
@@ -49,15 +27,16 @@ CalcCGemmLong::CalcCGemmLong(double rc, double lambdaC, double lambdaS):Calculat
 
 std::ostream& operator<<(std::ostream& out, const CalcCGemmLong& calc){
 	return out<<static_cast<const Calculator&>(calc)
-        <<" mean "<<calc.mix_<<" lambdaC "<<calc.lambdaC_<<" lambdaS "<<calc.lambdaS_<<" eps "<<calc.eps_<<" prec "<<calc.prec_;
+        <<" mix "<<calc.mix_<<" lambdaC "<<calc.lambdaC_<<" lambdaS "
+        <<calc.lambdaS_<<" rRep "<<calc.rRep_
+        <<" eps "<<calc.eps_<<" prec "<<calc.prec_;
 }
 
 //==== member functions ====
 
 void CalcCGemmLong::resize(int ntypes){
     if(CALC_CGEMM_LONG_PRINT_FUNC>0) std::cout<<"CalcCGemmLong::resize(int):\n";
-	if(ntypes<0) throw std::invalid_argument("CalcCGemmLong::resize(int): Invalid number of types.");
-	ntypes_=ntypes;
+    Calculator::resize(ntypes);
 	if(ntypes_>0){
         radius_=Eigen::VectorXd::Zero(ntypes_);
 		aOver_=Eigen::MatrixXd::Zero(ntypes_,ntypes_);
@@ -110,12 +89,16 @@ void CalcCGemmLong::read(Token& token){
     eps_=std::atof(token.next().c_str());
     prec_=std::atof(token.next().c_str());
     if(!token.end()){
+        rRep_=std::atof(token.next().c_str());
+    }
+    if(!token.end()){
         mix_=Calculator::Mix::read(string::to_upper(token.next()).c_str());
     }
     if(lambdaC_<=0) throw std::invalid_argument("CalcCGemmLong::read(Token&): Invalid lambdaC.");
     if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmLong::read(Token&): Invalid lambdaS.");
     if(prec_<=0) throw std::invalid_argument("CalcCGemmLong::read(Token&): Invalid prec.");
     if(eps_<=0) throw std::invalid_argument("CalcCGemmLong::read(Token&): Invalid eps.");
+    if(rRep_<=0) throw std::invalid_argument("CalcCGemmLong::read(Token&): Invalid rRep.");
     if(mix_==Calculator::Mix::NONE) throw std::invalid_argument("CalcCGemmLong::read(Token&): Invalid mixing type.");
 }
 
@@ -149,7 +132,7 @@ double CalcCGemmLong::energy(Structure& struc, const NeighborList& nlist)const{
 	const double energyK=coul_.energy(struc);
 	const double a=coul_.alpha();
     // r-space
-    const double cRep=1.0/(2.0*rRep*rRep);
+    const double cRep_=1.0/rRep_;
     double energyR=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const int ti=struc.type(i);
@@ -174,7 +157,8 @@ double CalcCGemmLong::energy(Structure& struc, const NeighborList& nlist)const{
                 // overlap
                 const double eOver=aOver_(ti,tj)*zi*zj*fmexp(-0.5*gammaS_(ti,tj)*dr2);
 				// repulsion
-				const double eRep=aRep_(ti,tj)*fmexp(-cRep*dr);
+				const double eRep=aRep_(ti,tj)*fmexp(-cRep_*dr);
+                //const double eRep=aRep_(ti,tj)*cRep_*fmexp(-cRep_*dr);
 				//compute energy
 				energyR+=eCoul+eOver+eRep;
 			}
@@ -194,7 +178,7 @@ double CalcCGemmLong::compute(Structure& struc, const NeighborList& nlist)const{
     const double energyK=coul_.compute(struc);
     const double a=coul_.alpha();
     // r-space
-    const double cRep=1.0/(2.0*rRep*rRep);
+    const double cRep_=1.0/rRep_;
     double energyR=0;
 	//double energyCoul=0;
 	//double energyOver=0;
@@ -232,8 +216,9 @@ double CalcCGemmLong::compute(Structure& struc, const NeighborList& nlist)const{
                 const double eOver=aOver_(ti,tj)*zi*zj*fmexp(-0.5*gammaS_(ti,tj)*dr2);
 				const double fOver=gammaS_(ti,tj)*eOver;
 				// repulsion
-				const double eRep=aRep_(ti,tj)*fmexp(-cRep*dr);
-				const double fRep=cRep*eRep;
+				const double eRep=aRep_(ti,tj)*fmexp(-cRep_*dr);
+				//const double eRep=aRep_(ti,tj)*cRep_*fmexp(-cRep_*dr);
+				const double fRep=cRep_*eRep;
 				//compute energy
 				energyR+=eCoul+eOver+eRep;
 				//energyCoul+=eCoul;

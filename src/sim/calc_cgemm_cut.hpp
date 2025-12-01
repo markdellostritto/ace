@@ -16,13 +16,12 @@
 #endif
 
 class CalcCGemmCut: public Calculator{
-public:
-    static const double rRep;//repulsive radius
 private:
 	//global parameters
-	Calculator::Mix mix_;
-    double lambdaC_;//radial scaling factor - Coulomb
-    double lambdaS_;//radial scaling factor - Overlap
+	Calculator::Mix mix_{Mix::HARMONIC};
+    double lambdaC_{1.0};//radial scaling factor - Coulomb
+    double lambdaS_{1.0};//radial scaling factor - Overlap
+	double rRep_{0.0};//repulsive radius
 	//type parameters
     Eigen::VectorXd radius_;//radius
     Eigen::MatrixXd aOver_;//overlap amplitude
@@ -32,8 +31,8 @@ private:
 	Eigen::MatrixXd rgammaC_;//reduced expontent - Coulomb
 public:
     //==== contructors/destructors ====
-	CalcCGemmCut();
-    CalcCGemmCut(double rc);
+	CalcCGemmCut():Calculator(Calculator::Name::CGEMM_CUT){}
+    CalcCGemmCut(double rc):Calculator(Calculator::Name::CGEMM_CUT,rc){}
 	CalcCGemmCut(double rc, double lambdaC, double lambdaS);
     ~CalcCGemmCut(){}
 
@@ -48,6 +47,8 @@ public:
     const double& lambdaC()const{return lambdaC_;}
 	double& lambdaS(){return lambdaS_;}
     const double& lambdaS()const{return lambdaS_;}
+	double& rRep(){return rRep_;}
+    const double& rRep()const{return rRep_;}
 	//type parameters
 	Eigen::VectorXd& radius(){return radius_;}
 	const Eigen::VectorXd& radius()const{return radius_;}

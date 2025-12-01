@@ -17,17 +17,16 @@
 #endif
 
 class CalcCGemmLong: public Calculator{
-public:
-	static const double rRep;//repulsive radius
 private:
 	//k-space
-	double eps_;
-	double prec_;
+	double eps_{1.0};
+	double prec_{1.0e-12};
 	KSpace::Coul coul_;
 	//global parameters
-	Calculator::Mix mix_;
-    double lambdaC_;//radial scaling factor - Coulomb
-    double lambdaS_;//radial scaling factor - Overlap
+	Calculator::Mix mix_{Mix::HARMONIC};
+    double lambdaC_{1.0};//radial scaling factor - Coulomb
+    double lambdaS_{1.0};//radial scaling factor - Overlap
+	double rRep_{0.0};
 	//type parameters
     Eigen::VectorXd radius_;//radius
     Eigen::MatrixXd aOver_;//overlap amplitude
@@ -37,8 +36,8 @@ private:
     Eigen::MatrixXd rgammaC_;//reduced expontent - Coulomb
 public:
     //==== contructors/destructors ====
-	CalcCGemmLong();
-    CalcCGemmLong(double rc);
+	CalcCGemmLong(){}
+    CalcCGemmLong(double rc):Calculator(Calculator::Name::CGEMM_LONG,rc){}
 	CalcCGemmLong(double rc, double lambdaC, double lambdaS);
     ~CalcCGemmLong(){}
 
@@ -60,6 +59,8 @@ public:
     const double& lambdaC()const{return lambdaC_;}
 	double& lambdaS(){return lambdaS_;}
     const double& lambdaS()const{return lambdaS_;}
+	double& rRep(){return rRep_;}
+    const double& rRep()const{return rRep_;}
 	//type parameters
 	Eigen::VectorXd& radius(){return radius_;}
 	const Eigen::VectorXd& radius()const{return radius_;}

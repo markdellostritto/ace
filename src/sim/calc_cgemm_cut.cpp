@@ -13,27 +13,10 @@ using math::constants::RadPI;
 using math::constants::ZERO;
 using math::special::fmexp;
 
-//==== constants ====
-
-const double CalcCGemmCut::rRep=0.05;
-
 //==== contructors/destructors ====
 
-CalcCGemmCut::CalcCGemmCut():Calculator(Calculator::Name::CGEMM_CUT){
-    mix_=Calculator::Mix::HARMONIC;
-    lambdaC_=1.0;
-    lambdaS_=1.0;
-}
-
-CalcCGemmCut::CalcCGemmCut(double rc):Calculator(Calculator::Name::CGEMM_CUT,rc){
-    mix_=Calculator::Mix::HARMONIC;
-    lambdaC_=1.0;
-    lambdaS_=1.0;
-}
-
 CalcCGemmCut::CalcCGemmCut(double rc, double lambdaC, double lambdaS):Calculator(Calculator::Name::CGEMM_CUT,rc){
-    mix_=Calculator::Mix::HARMONIC;
-	lambdaC_=lambdaC;
+    lambdaC_=lambdaC;
     lambdaS_=lambdaS;
 	if(lambdaC_<=0) throw std::invalid_argument("CalcCGemmCut::CalcCGemmCut(double,double,double): Invalid lambdaC\n");
     if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmCut::CalcCGemmCut(double,double,double): Invalid lambdaS\n");
@@ -43,15 +26,14 @@ CalcCGemmCut::CalcCGemmCut(double rc, double lambdaC, double lambdaS):Calculator
 
 std::ostream& operator<<(std::ostream& out, const CalcCGemmCut& calc){
 	return out<<static_cast<const Calculator&>(calc)
-        <<" mean "<<calc.mix_<<" lambdaC "<<calc.lambdaC_<<" lambdaS "<<calc.lambdaS_;
+        <<" mean "<<calc.mix_<<" lambdaC "<<calc.lambdaC_<<" lambdaS "<<calc.lambdaS_<<" rRep "<<calc.rRep_;
 }
 
 //==== member functions ====
 
 void CalcCGemmCut::resize(int ntypes){
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::resize(int):\n";
-	if(ntypes<0) throw std::invalid_argument("CalcCGemmCut::resize(int): Invalid number of types.");
-	ntypes_=ntypes;
+	Calculator::resize(ntypes);
 	if(ntypes_>0){
         radius_=Eigen::VectorXd::Zero(ntypes_);
 		aOver_=Eigen::MatrixXd::Zero(ntypes_,ntypes_);
@@ -102,11 +84,15 @@ void CalcCGemmCut::read(Token& token){
     static_cast<Calculator&>(*this).read(token);
     lambdaC_=std::atof(token.next().c_str());
     lambdaS_=std::atof(token.next().c_str());
+	if(!token.end()){
+        rRep_=std::atof(token.next().c_str());
+    }
     if(!token.end()){
         mix_=Calculator::Mix::read(string::to_upper(token.next()).c_str());
     }
     if(lambdaC_<=0) throw std::invalid_argument("CalcCGemmCut::read(Token&): Invalid lambdaC.");
     if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmCut::read(Token&): Invalid lambdaS.");
+	if(rRep_<=0) throw std::invalid_argument("CalcCGemmCut::read(Token&): Invalid rRep.");
     if(mix_==Calculator::Mix::NONE) throw std::invalid_argument("CalcCGemmCut::read(Token&): Invalid mix type.");
 }
 
@@ -131,7 +117,7 @@ void CalcCGemmCut::coeff(Token& token){
 double CalcCGemmCut::energy(Structure& struc, const NeighborList& nlist)const{
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::energy(const Structure&,const NeighborList&):\n";
     const double ke=units::Consts::ke();
-	const double cRep=1.0/(2.0*rRep*rRep);
+	const double cRep_=1.0/rRep_;
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const int ti=struc.type(i);
@@ -153,7 +139,8 @@ double CalcCGemmCut::energy(Structure& struc, const NeighborList& nlist)const{
                 // overlap
                 const double eOver=aOver_(ti,tj)*zi*zj*fmexp(-0.5*gammaS_(ti,tj)*dr2);
 				// repulsion
-				const double eRep=aRep_(ti,tj)*fmexp(-cRep*dr);
+				const double eRep=aRep_(ti,tj)*fmexp(-cRep_*dr);
+				//const double eRep=aRep_(ti,tj)*cRep_*fmexp(-cRep_*dr);
 				//compute energy
 				energy+=eCoul+eOver+eRep;
 			}
@@ -167,7 +154,7 @@ double CalcCGemmCut::energy(Structure& struc, const NeighborList& nlist)const{
 double CalcCGemmCut::energy(Structure& struc)const{
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::energy(const Structure&):\n";
     const double ke=units::Consts::ke();
-	const double cRep=1.0/(2.0*rRep*rRep);
+	const double cRep_=1.0/rRep_;
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const int ti=struc.type(i);
@@ -188,7 +175,8 @@ double CalcCGemmCut::energy(Structure& struc)const{
                 // overlap
                 const double eOver=aOver_(ti,tj)*zi*zj*fmexp(-0.5*gammaS_(ti,tj)*dr2);
 				// repulsion
-				const double eRep=aRep_(ti,tj)*fmexp(-cRep*dr);
+				const double eRep=aRep_(ti,tj)*fmexp(-cRep_*dr);
+				//const double eRep=aRep_(ti,tj)*cRep_*fmexp(-cRep_*dr);
 				//compute energy
 				energy+=eCoul+eOver+eRep;
 			}
@@ -201,7 +189,7 @@ double CalcCGemmCut::energy(Structure& struc)const{
 double CalcCGemmCut::compute(Structure& struc, const NeighborList& nlist)const{
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::compute(const Structure&,const NeighborList&):\n";
     const double ke=units::Consts::ke();
-	const double cRep=1.0/(2.0*rRep*rRep);
+	const double cRep_=1.0/rRep_;
 	double energy=0;
 	double energyCoul=0;
 	double energyOver=0;
@@ -238,8 +226,9 @@ double CalcCGemmCut::compute(Structure& struc, const NeighborList& nlist)const{
                 const double eOver=aOver_(ti,tj)*zi*zj*fmexp(-0.5*gammaS_(ti,tj)*dr2);
 				const double fOver=gammaS_(ti,tj)*eOver;
 				// repulsion
-				const double eRep=aRep_(ti,tj)*fmexp(-cRep*dr);
-				const double fRep=cRep*eRep;
+				const double eRep=aRep_(ti,tj)*fmexp(-cRep_*dr);
+				//const double eRep=aRep_(ti,tj)*cRep_*fmexp(-cRep_*dr);
+				const double fRep=cRep_*eRep;
 				//compute energy
 				energy+=eCoul+eOver+eRep;
                 energyCoul+=eCoul;
@@ -259,7 +248,7 @@ double CalcCGemmCut::compute(Structure& struc, const NeighborList& nlist)const{
 double CalcCGemmCut::compute(Structure& struc)const{
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::compute(const Structure&):\n";
     const double ke=units::Consts::ke();
-	const double cRep=1.0/(2.0*rRep*rRep);
+	const double cRep_=1.0/rRep_;
 	double energy=0;
 	double energyCoul=0;
 	double energyOver=0;
@@ -295,8 +284,9 @@ double CalcCGemmCut::compute(Structure& struc)const{
                 const double eOver=aOver_(ti,tj)*zi*zj*fmexp(-0.5*gammaS_(ti,tj)*dr2);
 				const double fOver=gammaS_(ti,tj)*eOver;
 				// repulsion
-				const double eRep=aRep_(ti,tj)*fmexp(-cRep*dr);
-				const double fRep=cRep*eRep;
+				const double eRep=aRep_(ti,tj)*fmexp(-cRep_*dr);
+				//const double eRep=aRep_(ti,tj)*cRep_*fmexp(-cRep_*dr);
+				const double fRep=cRep_*eRep;
 				//compute energy
 				energy+=eCoul+eOver+eRep;
                 energyCoul+=eCoul;
