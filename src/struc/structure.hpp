@@ -28,9 +28,9 @@
 #define STRUC_PRINT_DATA 0
 #endif
 
-typedef Eigen::Matrix<int,3,1> Vec3i;
-typedef Eigen::Matrix<double,3,1> Vec3d;
-typedef Eigen::Matrix<double,Eigen::Dynamic,1> VecXd;
+using Eigen::Vector3i;
+using Eigen::Vector3d;
+using Eigen::VectorXd;
 
 //**********************************************************************************************
 //AtomData
@@ -41,7 +41,7 @@ protected:
 	//atom type
 	Atom atom_;
 	//number of atoms
-	int nAtoms_;
+	int nAtoms_{0};
 	//basic properties
 	std::vector<std::string> name_;//name
 	std::vector<int>	an_;//atomic_number
@@ -52,19 +52,20 @@ protected:
 	std::vector<double> radius_;//radius
 	std::vector<double>	eta_;//eta
 	//vector properties
-	std::vector<Vec3i>	image_;//image
-	std::vector<Vec3d>	posn_;//position
-	std::vector<Vec3d>	vel_;//velocity
-	std::vector<Vec3d>	force_;//force
+	std::vector<Vector3i>	image_;//image
+	std::vector<Vector3d>	posn_;//position
+	std::vector<Vector3d>	vel_;//velocity
+	std::vector<Vector3d>	force_;//force
+	std::vector<Vector3d>	dipole_;//dipole
 	//nnp
-	std::vector<VecXd>	symm_;
+	std::vector<VectorXd>	symm_;
 public:
 	//==== constructors/destructors ====
 	AtomData():nAtoms_(0){}
 	~AtomData(){}
 	
 	//==== operators ====
-	friend std::ostream& operator<<(std::ostream& out, const AtomData& ad);
+	friend std::ostream& operator<<(std::ostream& out, const AtomData& atomData);
 	
 	//==== access - global ====
 	const Atom& atom()const{return atom_;}
@@ -88,17 +89,19 @@ public:
 	std::vector<double>& eta(){return eta_;}
 	const std::vector<double>& eta()const{return eta_;}
 	//vector properties
-	std::vector<Vec3i>& image(){return image_;}
-	const std::vector<Vec3i>& image()const{return image_;}
-	std::vector<Vec3d>& posn(){return posn_;}
-	const std::vector<Vec3d>& posn()const{return posn_;}
-	std::vector<Vec3d>& vel(){return vel_;}
-	const std::vector<Vec3d>& vel()const{return vel_;}
-	std::vector<Vec3d>& force(){return force_;}
-	const std::vector<Vec3d>& force()const{return force_;}
+	std::vector<Vector3i>& image(){return image_;}
+	const std::vector<Vector3i>& image()const{return image_;}
+	std::vector<Vector3d>& posn(){return posn_;}
+	const std::vector<Vector3d>& posn()const{return posn_;}
+	std::vector<Vector3d>& vel(){return vel_;}
+	const std::vector<Vector3d>& vel()const{return vel_;}
+	std::vector<Vector3d>& force(){return force_;}
+	const std::vector<Vector3d>& force()const{return force_;}
+	std::vector<Vector3d>& dipole(){return dipole_;}
+	const std::vector<Vector3d>& dipole()const{return dipole_;}
 	//nnp
-	std::vector<VecXd>& symm(){return symm_;}
-	const std::vector<VecXd>& symm()const{return symm_;}
+	std::vector<VectorXd>& symm(){return symm_;}
+	const std::vector<VectorXd>& symm()const{return symm_;}
 	
 	//==== access - atoms ====
 	//basic properties
@@ -118,17 +121,19 @@ public:
 	double& eta(int i){return eta_[i];}
 	const double& eta(int i)const{return eta_[i];}
 	//vector properties
-	Vec3i& image(int i){return image_[i];}
-	const Vec3i& image(int i)const{return image_[i];}
-	Vec3d& posn(int i){return posn_[i];}
-	const Vec3d& posn(int i)const{return posn_[i];}
-	Vec3d& vel(int i){return vel_[i];}
-	const Vec3d& vel(int i)const{return vel_[i];}
-	Vec3d& force(int i){return force_[i];}
-	const Vec3d& force(int i)const{return force_[i];}
+	Vector3i& image(int i){return image_[i];}
+	const Vector3i& image(int i)const{return image_[i];}
+	Vector3d& posn(int i){return posn_[i];}
+	const Vector3d& posn(int i)const{return posn_[i];}
+	Vector3d& vel(int i){return vel_[i];}
+	const Vector3d& vel(int i)const{return vel_[i];}
+	Vector3d& force(int i){return force_[i];}
+	const Vector3d& force(int i)const{return force_[i];}
+	Vector3d& dipole(int i){return dipole_[i];}
+	const Vector3d& dipole(int i)const{return dipole_[i];}
 	//nnp
-	VecXd& symm(int i){return symm_[i];}
-	const VecXd& symm(int i)const{return symm_[i];}
+	VectorXd& symm(int i){return symm_[i];}
+	const VectorXd& symm(int i)const{return symm_[i];}
 	
 	//==== member functions ====
 	void clear();

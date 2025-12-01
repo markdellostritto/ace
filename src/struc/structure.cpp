@@ -43,6 +43,7 @@ void AtomData::clear(){
 	posn_.clear();
 	vel_.clear();
 	force_.clear();
+	dipole_.clear();
 	//symm
 	symm_.clear();
 }
@@ -58,21 +59,22 @@ void AtomData::resize(int nAtoms, const Atom& atom){
 	nAtoms_=nAtoms;
 	if(nAtoms_>0){
 		//basic properties
-		if(atom.name)   name_.resize(nAtoms_);
-		if(atom.an)     an_.resize(nAtoms_,0);
-		if(atom.type)   type_.resize(nAtoms_,-1);
+		if(atom.name())   name_.resize(nAtoms_);
+		if(atom.an())     an_.resize(nAtoms_,0);
+		if(atom.type())   type_.resize(nAtoms_,-1);
 		//serial properties
-		if(atom.mass)   mass_.resize(nAtoms_,0.0);
-		if(atom.charge) charge_.resize(nAtoms_,0.0);
-		if(atom.radius) radius_.resize(nAtoms_,0.0);
-		if(atom.eta)    eta_.resize(nAtoms_,0.0);
+		if(atom.mass())   mass_.resize(nAtoms_,0.0);
+		if(atom.charge()) charge_.resize(nAtoms_,0.0);
+		if(atom.radius()) radius_.resize(nAtoms_,0.0);
+		if(atom.eta())    eta_.resize(nAtoms_,0.0);
 		//vector properties
-		if(atom.image)  image_.resize(nAtoms_,Eigen::Vector3i::Zero());
-		if(atom.posn)   posn_.resize(nAtoms_,Eigen::Vector3d::Zero());
-		if(atom.vel)    vel_.resize(nAtoms_,Eigen::Vector3d::Zero());
-		if(atom.force)  force_.resize(nAtoms_,Eigen::Vector3d::Zero());
+		if(atom.image())  image_.resize(nAtoms_,Eigen::Vector3i::Zero());
+		if(atom.posn())   posn_.resize(nAtoms_,Eigen::Vector3d::Zero());
+		if(atom.vel())    vel_.resize(nAtoms_,Eigen::Vector3d::Zero());
+		if(atom.force())  force_.resize(nAtoms_,Eigen::Vector3d::Zero());
+		if(atom.dipole()) dipole_.resize(nAtoms_,Eigen::Vector3d::Zero());
 		//nnp
-		if(atom.symm)	symm_.resize(nAtoms_,Eigen::Vector3d::Zero());
+		if(atom.symm())	symm_.resize(nAtoms_,Eigen::Vector3d::Zero());
 	}
 }
 
@@ -117,21 +119,22 @@ Structure& Structure::super(const Structure& struc, Structure& superc, const Eig
 				const Eigen::Vector3d R=i*struc.R().col(0)+j*struc.R().col(1)+k*struc.R().col(2);
 				for(int n=0; n<struc.nAtoms(); ++n){
 					//basic properties
-					if(atom.name)		superc.name(c)=struc.name(n);
-					if(atom.an)			superc.an(c)=struc.an(n);
-					if(atom.type)		superc.type(c)=struc.type(n);
+					if(atom.name())  superc.name(c)=struc.name(n);
+					if(atom.an())    superc.an(c)=struc.an(n);
+					if(atom.type())  superc.type(c)=struc.type(n);
 					//serial properties
-					if(atom.mass)		superc.mass(c)=struc.mass(n);
-					if(atom.charge)		superc.charge(c)=struc.charge(n);
-					if(atom.radius)		superc.radius(c)=struc.radius(n);
-					if(atom.eta)		superc.eta(c)=struc.eta(n);
+					if(atom.mass())  superc.mass(c)=struc.mass(n);
+					if(atom.charge())superc.charge(c)=struc.charge(n);
+					if(atom.radius())superc.radius(c)=struc.radius(n);
+					if(atom.eta())   superc.eta(c)=struc.eta(n);
 					//vector properties
-					if(atom.image)		superc.image(c)=struc.image(n);
-					if(atom.posn)		superc.posn(c)=struc.posn(n)+R;
-					if(atom.vel) 		superc.vel(c)=struc.vel(n);
-					if(atom.force) 		superc.force(c)=struc.force(n);
+					if(atom.image()) superc.image(c)=struc.image(n);
+					if(atom.posn())  superc.posn(c)=struc.posn(n)+R;
+					if(atom.vel())   superc.vel(c)=struc.vel(n);
+					if(atom.force()) superc.force(c)=struc.force(n);
+					if(atom.dipole())superc.dipole(c)=struc.dipole(n);
 					//nnp
-					if(atom.symm) 		superc.symm(c)=struc.symm(n);
+					if(atom.symm())  superc.symm(c)=struc.symm(n);
 					//increment
 					c++;
 				}
@@ -239,21 +242,22 @@ namespace serialize{
 		//number of atoms
 		size+=sizeof(obj.nAtoms());
 		//basic properties
-		if(obj.atom().name)   size+=nbytes(obj.name());
-		if(obj.atom().an)     size+=nbytes(obj.an());
-		if(obj.atom().type)   size+=nbytes(obj.type());
+		if(obj.atom().name())   size+=nbytes(obj.name());
+		if(obj.atom().an())     size+=nbytes(obj.an());
+		if(obj.atom().type())   size+=nbytes(obj.type());
 		//serial properties
-		if(obj.atom().mass)   size+=nbytes(obj.mass());
-		if(obj.atom().charge) size+=nbytes(obj.charge());
-		if(obj.atom().radius) size+=nbytes(obj.radius());
-		if(obj.atom().eta)    size+=nbytes(obj.eta());
+		if(obj.atom().mass())   size+=nbytes(obj.mass());
+		if(obj.atom().charge()) size+=nbytes(obj.charge());
+		if(obj.atom().radius()) size+=nbytes(obj.radius());
+		if(obj.atom().eta())    size+=nbytes(obj.eta());
 		//vector properties
-		if(obj.atom().image)  size+=nbytes(obj.image());
-		if(obj.atom().posn)   size+=nbytes(obj.posn());
-		if(obj.atom().vel)    size+=nbytes(obj.vel());
-		if(obj.atom().force)  size+=nbytes(obj.force());
+		if(obj.atom().image())  size+=nbytes(obj.image());
+		if(obj.atom().posn())   size+=nbytes(obj.posn());
+		if(obj.atom().vel())    size+=nbytes(obj.vel());
+		if(obj.atom().force())  size+=nbytes(obj.force());
+		if(obj.atom().dipole()) size+=nbytes(obj.dipole());
 		//nnp
-		if(obj.atom().symm)   size+=nbytes(obj.symm());
+		if(obj.atom().symm())   size+=nbytes(obj.symm());
 		//return
 		return size;
 	}
@@ -278,21 +282,22 @@ namespace serialize{
 		//natoms
 		std::memcpy(arr+pos,&obj.nAtoms(),sizeof(int)); pos+=sizeof(int);
 		//basic properties
-		if(obj.atom().name)   pos+=pack(obj.name(),arr+pos);
-		if(obj.atom().an)     pos+=pack(obj.an(),arr+pos);
-		if(obj.atom().type)   pos+=pack(obj.type(),arr+pos);
+		if(obj.atom().name())   pos+=pack(obj.name(),arr+pos);
+		if(obj.atom().an())     pos+=pack(obj.an(),arr+pos);
+		if(obj.atom().type())   pos+=pack(obj.type(),arr+pos);
 		//serial properties
-		if(obj.atom().mass)   pos+=pack(obj.mass(),arr+pos);
-		if(obj.atom().charge) pos+=pack(obj.charge(),arr+pos);
-		if(obj.atom().radius) pos+=pack(obj.radius(),arr+pos);
-		if(obj.atom().eta)    pos+=pack(obj.eta(),arr+pos);
+		if(obj.atom().mass())   pos+=pack(obj.mass(),arr+pos);
+		if(obj.atom().charge()) pos+=pack(obj.charge(),arr+pos);
+		if(obj.atom().radius()) pos+=pack(obj.radius(),arr+pos);
+		if(obj.atom().eta())    pos+=pack(obj.eta(),arr+pos);
 		//vector properties
-		if(obj.atom().image)  pos+=pack(obj.image(),arr+pos);
-		if(obj.atom().posn)   pos+=pack(obj.posn(),arr+pos);
-		if(obj.atom().vel)    pos+=pack(obj.vel(),arr+pos);
-		if(obj.atom().force)  pos+=pack(obj.force(),arr+pos);
+		if(obj.atom().image())  pos+=pack(obj.image(),arr+pos);
+		if(obj.atom().posn())   pos+=pack(obj.posn(),arr+pos);
+		if(obj.atom().vel())    pos+=pack(obj.vel(),arr+pos);
+		if(obj.atom().force())  pos+=pack(obj.force(),arr+pos);
+		if(obj.atom().dipole()) pos+=pack(obj.dipole(),arr+pos);
 		//nnp
-		if(obj.atom().symm)   pos+=pack(obj.symm(),arr+pos);
+		if(obj.atom().symm())   pos+=pack(obj.symm(),arr+pos);
 		//return
 		return pos;
 	}
@@ -321,21 +326,22 @@ namespace serialize{
 		//resize
 		obj.resize(nAtoms,atom);
 		//basic properties
-		if(obj.atom().name)   pos+=unpack(obj.name(),arr+pos);
-		if(obj.atom().an)     pos+=unpack(obj.an(),arr+pos);
-		if(obj.atom().type)   pos+=unpack(obj.type(),arr+pos);
+		if(obj.atom().name())   pos+=unpack(obj.name(),arr+pos);
+		if(obj.atom().an())     pos+=unpack(obj.an(),arr+pos);
+		if(obj.atom().type())   pos+=unpack(obj.type(),arr+pos);
 		//serial properties
-		if(obj.atom().mass)   pos+=unpack(obj.mass(),arr+pos);
-		if(obj.atom().charge) pos+=unpack(obj.charge(),arr+pos);
-		if(obj.atom().radius) pos+=unpack(obj.radius(),arr+pos);
-		if(obj.atom().eta)    pos+=unpack(obj.eta(),arr+pos);
+		if(obj.atom().mass())   pos+=unpack(obj.mass(),arr+pos);
+		if(obj.atom().charge()) pos+=unpack(obj.charge(),arr+pos);
+		if(obj.atom().radius()) pos+=unpack(obj.radius(),arr+pos);
+		if(obj.atom().eta())    pos+=unpack(obj.eta(),arr+pos);
 		//vector properties
-		if(obj.atom().image)  pos+=unpack(obj.image(),arr+pos);
-		if(obj.atom().posn)   pos+=unpack(obj.posn(),arr+pos);
-		if(obj.atom().vel)    pos+=unpack(obj.vel(),arr+pos);
-		if(obj.atom().force)  pos+=unpack(obj.force(),arr+pos);
+		if(obj.atom().image())  pos+=unpack(obj.image(),arr+pos);
+		if(obj.atom().posn())   pos+=unpack(obj.posn(),arr+pos);
+		if(obj.atom().vel())    pos+=unpack(obj.vel(),arr+pos);
+		if(obj.atom().force())  pos+=unpack(obj.force(),arr+pos);
+		if(obj.atom().dipole()) pos+=unpack(obj.dipole(),arr+pos);
 		//nnp
-		if(obj.atom().symm)   pos+=unpack(obj.symm(),arr+pos);
+		if(obj.atom().symm())   pos+=unpack(obj.symm(),arr+pos);
 		//return
 		return pos;
 	}
