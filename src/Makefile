@@ -25,16 +25,24 @@ math = special.o reduce.o random.o eigen.o corr.o
 chem = units.o ptable.o 
 str = string.o print.o token.o
 fstruc = file_struc.o vasp_struc.o xyz_struc.o cube_struc.o qe_struc.o
+ftraj = file_traj.o xyz_traj.o vasp_traj.o lammps_traj.o
 mem = serialize.o map.o
-calc = calc.o calc_factory.o calc_lj_cut.o calc_coul_cut.o calc_coul_long.o calc_cgem_cut.o calc_cgem_long.o calc_cgemm_cut.o calc_cgemm_long.o
 opt = loss.o stop.o algo.o objective.o decay.o iter.o
 constraint = constraint.o constraint_factory.o constraint_freeze.o 
 sim = engine.o integrator.o job.o
-kspaces = kspace.o kspace_coul.o
+kspaces = kspace.o kspace_coul.o kspace_dipole.o
 thread = comm.o dist.o
+signal = fft.o window.o
 neural = batch.o nn.o 
 basis = basis.o basis_radial.o basis_angular.o
 nnp = nnh.o nnp.o cutoff.o 
+calc = calc.o calc_factory.o \
+       calc_lj_cut.o \
+       calc_coul_cut.o calc_coul_long.o \
+       calc_dipole_cut.o calc_dipole_long.o \
+       calc_thole_cut.o calc_thole_long.o \
+       calc_cgemm_cut.o calc_cgemm_long.o
+
 
 ##################################################################################
 # OBJECT FILE MAKE RULES
@@ -54,6 +62,12 @@ neighbor.o: struc/neighbor.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c struc/neighbor.cpp
 grid.o: struc/grid.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c struc/grid.cpp
+group.o: struc/group.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c struc/group.cpp
+trajectory.o: struc/trajectory.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c struc/trajectory.cpp
+interval.o: struc/interval.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c struc/interval.cpp
 
 # ==== math ====
 
@@ -115,11 +129,22 @@ integrator.o: sim/integrator.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/integrator.cpp
 engine.o: sim/engine.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/engine.cpp
+thole.o: sim/thole.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/thole.cpp
+
+# ==== signal ====
+fft.o: signal/fft.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c signal/fft.cpp -lfftw3
+window.o: signal/window.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c signal/window.cpp
 
 # ==== format ====
 
 format.o: format/format.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c format/format.cpp
+
+# ==== format - struc ====
+
 file_struc.o: format/file_struc.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c format/file_struc.cpp
 vasp_struc.o: format/vasp_struc.cpp
@@ -130,6 +155,17 @@ cube_struc.o: format/cube_struc.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c format/cube_struc.cpp
 qe_struc.o: format/qe_struc.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c format/qe_struc.cpp
+
+# ==== format ====
+
+file_traj.o: format/file_traj.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c format/file_traj.cpp
+vasp_traj.o: format/vasp_traj.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c format/vasp_traj.cpp
+xyz_traj.o: format/xyz_traj.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c format/xyz_traj.cpp
+lammps_traj.o: format/lammps_traj.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c format/lammps_traj.cpp
 
 # ==== machine learning ====
 
@@ -187,10 +223,14 @@ calc_coul_cut.o: sim/calc_coul_cut.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_coul_cut.cpp
 calc_coul_long.o: sim/calc_coul_long.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_coul_long.cpp
-calc_cgem_cut.o: sim/calc_cgem_cut.cpp
-	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_cgem_cut.cpp
-calc_cgem_long.o: sim/calc_cgem_long.cpp
-	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_cgem_long.cpp
+calc_dipole_cut.o: sim/calc_dipole_cut.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_dipole_cut.cpp
+calc_dipole_long.o: sim/calc_dipole_long.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_dipole_long.cpp
+calc_thole_cut.o: sim/calc_thole_cut.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_thole_cut.cpp
+calc_thole_long.o: sim/calc_thole_long.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_thole_long.cpp
 calc_cgemm_cut.o: sim/calc_cgemm_cut.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_cgemm_cut.cpp
 calc_cgemm_long.o: sim/calc_cgemm_long.cpp
@@ -211,6 +251,8 @@ kspace.o: sim/kspace.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/kspace.cpp
 kspace_coul.o: sim/kspace_coul.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/kspace_coul.cpp
+kspace_dipole.o: sim/kspace_dipole.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/kspace_dipole.cpp
 
 ##################################################################################
 # TARGETS
@@ -232,22 +274,26 @@ test_units: units.o print.o
 # string
 test_token: $(str)
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o test_token.exe str/test_token.cpp $(str)
+# ml
+test_nn_neuron: nn.o string.o serialize.o eigen.o print.o special.o token.o random.o
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o test_nn_neuron.exe ml/test_nn_neuron.cpp nn.o string.o serialize.o eigen.o print.o special.o token.o random.o
 
 # ==== MOLECULAR DYNAMICS ====
+
 md: $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(kspaces) $(calc) $(constraint) $(sim) $(util) format.o grid.o
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o md.exe sim/md.cpp $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(kspaces) $(calc) $(constraint) $(sim) $(util) format.o grid.o 
-fit_cgem: $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(calc) $(kspaces) $(constraint) $(sim) format.o grid.o -lnlopt
-	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o fit_cgem.exe sim/fit_cgem.cpp $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(calc) $(kspaces) $(constraint) $(sim) format.o grid.o -lnlopt
 fit_cgemm: $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(calc) $(kspaces) $(constraint) $(sim) format.o grid.o -lnlopt
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o fit_cgemm.exe sim/fit_cgemm.cpp $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(calc) $(kspaces) $(constraint) $(sim) format.o grid.o -lnlopt
 fit_cgemm_omp: $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(calc) $(kspaces) $(constraint) $(sim) format.o grid.o -lnlopt
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o fit_cgemm_omp.exe sim/fit_cgemm_omp.cpp $(str) $(math) $(chem) $(struc) $(fstruc) $(mem) $(calc) $(kspaces) $(constraint) $(sim) format.o grid.o -lnlopt -fopenmp
 
 # ==== NEURAL NETWORK ====
+
 nn_fit: $(neural) $(str) $(math) $(util) $(thread) $(opt) serialize.o compiler.o nn_train.o
 	$(CXX_THREAD) $(CXX_FLAGS) $(INC) -o nn_fit.exe ml/nn_fit.cpp $(neural) $(str) $(math) $(util) $(thread) $(opt) serialize.o compiler.o nn_train.o
 
 # ==== NNP ====
+
 test_nnp_cutoff: $(mem) $(str) $(math) basis.o cutoff.o
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o test_nnp_cutoff.exe nnp/test_nnp_cutoff.cpp $(mem) $(str) $(math) basis.o cutoff.o
 test_basis_radial: $(mem) $(str) $(math) basis.o basis_radial.o cutoff.o
@@ -262,4 +308,11 @@ nnptefr2: $(nnp) $(str) $(math) $(mem) $(thread) $(basis) $(struc) $(fstruc) $(c
 	$(CXX_THREAD) $(CXX_FLAGS) $(INC) -o nnptefr2.exe nnp/nnptefr2.cpp $(nnp) $(str) $(math) $(mem) $(thread) $(basis) $(struc) $(fstruc) $(chem) $(kspaces) $(opt) $(neural) $(util) $(calc) $(constraint) format.o alias.o pca.o grid.o engine.o integrator.o 
 nnptefr: $(nnp) $(str) $(math) $(mem) $(thread) $(basis) $(struc) $(fstruc) $(chem) $(kspaces) $(opt) $(neural) $(util) $(calc) $(constraint) format.o alias.o pca.o grid.o engine.o integrator.o
 	$(CXX_THREAD) $(CXX_FLAGS) $(INC) -o nnptefr.exe nnp/nnptefr.cpp $(nnp) $(str) $(math) $(mem) $(thread) $(basis) $(struc) $(fstruc) $(chem) $(kspaces) $(opt) $(neural) $(util) $(calc) $(constraint) format.o alias.o pca.o grid.o engine.o integrator.o 
+
+# ==== SPECTRA ====
+
+vdos: $(struc) trajectory.o interval.o group.o format.o $(ftraj) $(str) $(mem) $(chem) $(math) $(signal) 
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o vdos.exe spectra/vdos.cpp $(struc) trajectory.o interval.o group.o format.o $(ftraj) $(str) $(mem) $(chem) $(math) $(signal) -lfftw3
+raman_thole: $(struc) trajectory.o interval.o group.o format.o $(ftraj) $(str) $(mem) $(chem) $(math) $(signal) $(kspaces) $(calc) thole.o 
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o raman_thole.exe spectra/raman_thole.cpp $(struc) trajectory.o interval.o group.o format.o $(ftraj) $(str) $(mem) $(chem) $(math) $(signal) $(kspaces) $(calc) thole.o -lfftw3
 
