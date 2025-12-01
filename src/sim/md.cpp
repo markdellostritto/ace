@@ -87,10 +87,10 @@ int main(int argc, char* argv[]){
 				unitsys=units::System::read(string::to_upper(token.next()).c_str());
 				units::Consts::init(unitsys);
 			} else if(tag=="ATOM"){
-				atom=Atom::read(token);
-				if(atom.posn==false) throw std::invalid_argument("sim::main(int,char**): Atom type missing position.");
-				if(atom.mass==false) throw std::invalid_argument("sim::main(int,char**): Atom type missing mass.");
-				if(atom.type==false) throw std::invalid_argument("sim::main(int,char**): Atom type missing type.");
+				atom.read(token);
+				if(atom.posn()==false) throw std::invalid_argument("md::main(int,char**): Atom type missing position.");
+				if(atom.mass()==false) throw std::invalid_argument("md::main(int,char**): Atom type missing mass.");
+				if(atom.type()==false) throw std::invalid_argument("md::main(int,char**): Atom type missing type.");
 			} else if(tag=="FORMAT"){//simulation format
 				format=FILE_FORMAT::read(string::to_upper(token.next()).c_str());
 			} else if(tag=="FSTRUC"){
