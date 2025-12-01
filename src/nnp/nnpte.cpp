@@ -192,31 +192,31 @@ template <> int unpack(NNPTE& obj, const char* arr){
 
 std::ostream& operator<<(std::ostream& out, const PreScale& prescale){
 	switch(prescale){
-		case PreScale::NONE: out<<"NONE"; break;
+		case PreScale::IDENTITY: out<<"IDENTITY"; break;
 		case PreScale::DEV: out<<"DEV"; break;
 		case PreScale::MINMAX: out<<"MINMAX"; break;
 		case PreScale::MAX: out<<"MAX"; break;
-		default: out<<"UNKNOWN"; break;
+		default: out<<"NONE"; break;
 	}
 	return out;
 }
 
 const char* PreScale::name(const PreScale& prescale){
 	switch(prescale){
-		case PreScale::NONE: return "NONE";
+		case PreScale::IDENTITY: return "IDENTITY";
 		case PreScale::DEV: return "DEV";
 		case PreScale::MINMAX: return "MINMAX";
 		case PreScale::MAX: return "MAX";
-		default: return "UNKNOWN";
+		default: return "NONE";
 	}
 }
 
 PreScale PreScale::read(const char* str){
-	if(std::strcmp(str,"NONE")==0) return PreScale::NONE;
+	if(std::strcmp(str,"IDENTITY")==0) return PreScale::IDENTITY;
 	else if(std::strcmp(str,"DEV")==0) return PreScale::DEV;
 	else if(std::strcmp(str,"MINMAX")==0) return PreScale::MINMAX;
 	else if(std::strcmp(str,"MAX")==0) return PreScale::MAX;
-	else return PreScale::UNKNOWN;
+	else return PreScale::NONE;
 }
 
 //************************************************************
@@ -225,31 +225,31 @@ PreScale PreScale::read(const char* str){
 
 std::ostream& operator<<(std::ostream& out, const PreBias& prebias){
 	switch(prebias){
-		case PreBias::NONE: out<<"NONE"; break;
+		case PreBias::IDENTITY: out<<"IDENTITY"; break;
 		case PreBias::MEAN: out<<"MEAN"; break;
 		case PreBias::MID: out<<"MID"; break;
 		case PreBias::MIN: out<<"MIN"; break;
-		default: out<<"UNKNOWN"; break;
+		default: out<<"NONE"; break;
 	}
 	return out;
 }
 
 const char* PreBias::name(const PreBias& prebias){
 	switch(prebias){
-		case PreBias::NONE: return "NONE";
+		case PreBias::IDENTITY: return "IDENTITY";
 		case PreBias::MEAN: return "MEAN";
 		case PreBias::MID: return "MID";
 		case PreBias::MIN: return "MIN";
-		default: return "UNKNOWN";
+		default: return "NONE";
 	}
 }
 
 PreBias PreBias::read(const char* str){
-	if(std::strcmp(str,"NONE")==0) return PreBias::NONE;
+	if(std::strcmp(str,"IDENTITY")==0) return PreBias::IDENTITY;
 	else if(std::strcmp(str,"MEAN")==0) return PreBias::MEAN;
 	else if(std::strcmp(str,"MID")==0) return PreBias::MID;
 	else if(std::strcmp(str,"MIN")==0) return PreBias::MIN;
-	else return PreBias::UNKNOWN;
+	else return PreBias::NONE;
 }
 
 //************************************************************
@@ -258,34 +258,34 @@ PreBias PreBias::read(const char* str){
 
 std::ostream& operator<<(std::ostream& out, const Norm& norm){
 	switch(norm){
-		case Norm::NONE: out<<"NONE"; break;
+		case Norm::IDENTITY: out<<"IDENTITY"; break;
 		case Norm::LINEAR: out<<"LINEAR"; break;
 		case Norm::SQRT: out<<"SQRT"; break;
 		case Norm::CBRT: out<<"CBRT"; break;
 		case Norm::LOG: out<<"LOG"; break;
-		default: out<<"UNKNOWN"; break;
+		default: out<<"NONE"; break;
 	}
 	return out;
 }
 
 const char* Norm::name(const Norm& norm){
 	switch(norm){
-		case Norm::NONE: return "NONE";
+		case Norm::IDENTITY: return "IDENTITY";
 		case Norm::LINEAR: return "LINEAR";
 		case Norm::SQRT: return "SQRT";
 		case Norm::CBRT: return "CBRT";
 		case Norm::LOG: return "LOG";
-		default: return "UNKNOWN";
+		default: return "NONE";
 	}
 }
 
 Norm Norm::read(const char* str){
-	if(std::strcmp(str,"NONE")==0) return Norm::NONE;
+	if(std::strcmp(str,"IDENTITY")==0) return Norm::IDENTITY;
 	else if(std::strcmp(str,"LINEAR")==0) return Norm::LINEAR;
 	else if(std::strcmp(str,"SQRT")==0) return Norm::SQRT;
 	else if(std::strcmp(str,"CBRT")==0) return Norm::CBRT;
 	else if(std::strcmp(str,"LOG")==0) return Norm::LOG;
-	else return Norm::UNKNOWN;
+	else return Norm::NONE;
 }
 
 //************************************************************
@@ -297,7 +297,7 @@ std::ostream& operator<<(std::ostream& out, const Mode& mode){
 		case Mode::TRAIN: out<<"TRAIN"; break;
 		case Mode::TEST: out<<"TEST"; break;
 		case Mode::SYMM: out<<"SYMM"; break;
-		default: out<<"UNKNOWN"; break;
+		default: out<<"NONE"; break;
 	}
 	return out;
 }
@@ -307,7 +307,7 @@ const char* Mode::name(const Mode& mode){
 		case Mode::TRAIN: return "TRAIN";
 		case Mode::TEST: return "TEST";
 		case Mode::SYMM: return "SYMM";
-		default: return "UNKNOWN";
+		default: return "NONE";
 	}
 }
 
@@ -315,7 +315,7 @@ Mode Mode::read(const char* str){
 	if(std::strcmp(str,"TRAIN")==0) return Mode::TRAIN;
 	else if(std::strcmp(str,"TEST")==0) return Mode::TEST;
 	else if(std::strcmp(str,"SYMM")==0) return Mode::SYMM;
-	else return Mode::UNKNOWN;
+	else return Mode::NONE;
 }
 
 //************************************************************
@@ -724,7 +724,7 @@ void NNPTE::train(int batchSize, const std::vector<Structure>& struc_train, cons
 				inpb_[n]=Eigen::VectorXd::Constant(nnp_.nnh(n).nInput(),0.0);
 			}
 		}break;
-		case PreBias::UNKNOWN:
+		case PreBias::NONE:
 			throw std::invalid_argument("Invalid input bias.");
 		break;
 	}
@@ -763,7 +763,7 @@ void NNPTE::train(int batchSize, const std::vector<Structure>& struc_train, cons
 				inpw_[n]=Eigen::VectorXd::Constant(nnp_.nnh(n).nInput(),1.0);
 			}
 		}break;
-		case PreScale::UNKNOWN:
+		case PreScale::NONE:
 			throw std::invalid_argument("Invalid input scaling.");
 		break;
 	}
@@ -1599,14 +1599,19 @@ void NNPTE::read(FILE* reader, NNPTE& nnpte){
 int main(int argc, char* argv[]){
 	//======== global variables ========
 	//units
-		units::System unitsys=units::System::UNKNOWN;
+		units::System unitsys=units::System::NONE;
 	//mode
 		Mode mode=Mode::TRAIN;
 	//atom format
-		AtomType atomT;
-		atomT.name=true; atomT.an=true; atomT.type=true; atomT.index=true;
-		atomT.posn=true; atomT.force=false; atomT.symm=true;
-		atomT.charge=false;
+		Atom atom;
+		atom.name()=true; 
+		atom.an()=true; 
+		atom.type()=true; 
+		atom.index()=true;
+		atom.posn()=true; 
+		atom.force()=false; 
+		atom.symm()=true;
+		atom.charge()=false;
 	//flags - compute
 		struct Compute{
 			bool coul=false;  //compute - external potential - coulomb
@@ -1809,15 +1814,15 @@ int main(int argc, char* argv[]){
 					} else if(atomtag=="CHARGE"){
 						types[index].charge().flag()=true;
 						types[index].charge().val()=std::atof(token.next().c_str());
-						atomT.charge=true;
+						atom.charge=true;
 					} else if(atomtag=="CHI"){
 						types[index].chi().flag()=true;
 						types[index].chi().val()=std::atof(token.next().c_str());
-						atomT.chi=true;
+						atom.chi=true;
 					} else if(atomtag=="ETA"){
 						types[index].eta().flag()=true;
 						types[index].eta().val()=std::atof(token.next().c_str());
-						atomT.eta=true;
+						atom.eta=true;
 					} else if(atomtag=="ENERGY"){
 						types[index].energy().flag()=true;
 						types[index].energy().val()=std::atof(token.next().c_str());
@@ -1889,8 +1894,8 @@ int main(int argc, char* argv[]){
 			
 			//======== set atom flags =========
 			if(NNPTE_PRINT_STATUS>0) std::cout<<"setting atom flags\n";
-			atomT.force=compute.force;
-			atomT.charge=compute.coul;
+			atom.force=compute.force;
+			atom.charge=compute.coul;
 			
 			//======== read - nnpte =========
 			if(NNPTE_PRINT_STATUS>0) std::cout<<"reading neural network training parameters\n";
@@ -1963,7 +1968,7 @@ int main(int argc, char* argv[]){
 			std::cout<<print::buf(strbuf)<<"\n";
 			std::cout<<print::title("GENERAL PARAMETERS",strbuf)<<"\n";
 			std::cout<<"read_pot  = "<<read_pot<<"\n";
-			std::cout<<"atom_type = "<<atomT<<"\n";
+			std::cout<<"atom_type = "<<atom<<"\n";
 			std::cout<<"format    = "<<format<<"\n";
 			std::cout<<"units     = "<<unitsys<<"\n";
 			std::cout<<"mode      = "<<mode<<"\n";
@@ -2010,9 +2015,9 @@ int main(int argc, char* argv[]){
 			if(mode==Mode::TRAIN && data[0].size()==0) throw std::invalid_argument("No data provided - training.");
 			if(mode==Mode::TRAIN && data[1].size()==0) throw std::invalid_argument("No data provided - validation.");
 			if(mode==Mode::TEST  && data[2].size()==0) throw std::invalid_argument("No data provided - testing.");
-			if(mode==Mode::UNKNOWN) throw std::invalid_argument("Invalid calculation mode");
-			if(format==FILE_FORMAT::UNKNOWN) throw std::invalid_argument("Invalid file format.");
-			if(unitsys==units::System::UNKNOWN) throw std::invalid_argument("Invalid unit system.");
+			if(mode==Mode::NONE) throw std::invalid_argument("Invalid calculation mode");
+			if(format==FILE_FORMAT::NONE) throw std::invalid_argument("Invalid file format.");
+			if(unitsys==units::System::NONE) throw std::invalid_argument("Invalid unit system.");
 			if(types.size()==0) throw std::invalid_argument("Invalid number of types.");
 		}
 		
@@ -2023,7 +2028,7 @@ int main(int argc, char* argv[]){
 		//mode
 		MPI_Bcast(&mode,1,MPI_INT,0,WORLD.mpic());
 		//atom type
-		thread::bcast(WORLD.mpic(),0,atomT);
+		thread::bcast(WORLD.mpic(),0,atom);
 		thread::bcast(WORLD.mpic(),0,annp);
 		//flags - compute
 		MPI_Bcast(&compute.coul,1,MPI_C_BOOL,0,WORLD.mpic());
@@ -2188,7 +2193,7 @@ int main(int argc, char* argv[]){
 				if(BATCH.rank()==0){
 					for(int i=0; i<dist[n].size(); ++i){
 						const std::string& file=files[n][indices[n][dist[n].index(i)]];
-						read_struc(file.c_str(),format,atomT,strucs[n][i]);
+						read_struc(file.c_str(),format,atom,strucs[n][i]);
 						if(NNPTE_PRINT_DATA>1) std::cout<<"\t"<<file<<" "<<strucs[n][i].pe()<<"\n";
 					}
 				}
@@ -2277,7 +2282,7 @@ int main(int argc, char* argv[]){
 		}
 		
 		//======== set the charges ========
-		if(atomT.charge){
+		if(atom.charge){
 			if(WORLD.rank()==0) std::cout<<"setting charges\n";
 			for(int n=0; n<3; ++n){
 				for(int i=0; i<dist[n].size(); ++i){
@@ -2289,7 +2294,7 @@ int main(int argc, char* argv[]){
 		}
 		
 		//======== set the electronegativities ========
-		if(atomT.chi){
+		if(atom.chi){
 			if(WORLD.rank()==0) std::cout<<"setting electronegativities\n";
 			for(int n=0; n<3; ++n){
 				for(int i=0; i<dist[n].size(); ++i){
@@ -2301,7 +2306,7 @@ int main(int argc, char* argv[]){
 		}
 		
 		//======== set the idempotentials ========
-		if(atomT.eta){
+		if(atom.eta){
 			if(WORLD.rank()==0) std::cout<<"setting idempotentials\n";
 			for(int n=0; n<3; ++n){
 				for(int i=0; i<dist[n].size(); ++i){

@@ -1690,10 +1690,15 @@ int main(int argc, char* argv[]){
 	//mode
 		Mode mode=Mode::TRAIN;
 	//atom format
-		AtomType atomT;
-		atomT.name=true; atomT.an=true; atomT.type=true; atomT.index=true;
-		atomT.posn=true; atomT.force=true; atomT.symm=true;
-		atomT.charge=false;
+		Atom atom;
+		atom.name()=true; 
+		atom.an()=true; 
+		atom.type()=true; 
+		atom.index()=true;
+		atom.posn()=true; 
+		atom.force()=true; 
+		atom.symm()=true;
+		atom.charge()=false;
 	//flags - compute
 		struct Compute{
 			bool coul=false;  //compute - external potential - coulomb
@@ -1920,15 +1925,11 @@ int main(int argc, char* argv[]){
 					} else if(atomtag=="CHARGE"){
 						types[index].charge().flag()=true;
 						types[index].charge().val()=std::atof(token.next().c_str());
-						atomT.charge=true;
-					} else if(atomtag=="CHI"){
-						types[index].chi().flag()=true;
-						types[index].chi().val()=std::atof(token.next().c_str());
-						atomT.chi=true;
+						atom.charge()=true;
 					} else if(atomtag=="ETA"){
 						types[index].eta().flag()=true;
 						types[index].eta().val()=std::atof(token.next().c_str());
-						atomT.eta=true;
+						atom.eta()=true;
 					} else if(atomtag=="ENERGY"){
 						types[index].energy().flag()=true;
 						types[index].energy().val()=std::atof(token.next().c_str());
@@ -2004,7 +2005,7 @@ int main(int argc, char* argv[]){
 			
 			//======== set atom flags =========
 			if(NNPTEFR_PRINT_STATUS>0) std::cout<<"setting atom flags\n";
-			atomT.charge=compute.coul;
+			atom.charge()=compute.coul;
 			
 			//======== read - nnpte =========
 			if(NNPTEFR_PRINT_STATUS>0) std::cout<<"reading neural network training parameters\n";
@@ -2078,7 +2079,7 @@ int main(int argc, char* argv[]){
 			std::cout<<print::title("GENERAL PARAMETERS",strbuf)<<"\n";
 			std::cout<<"seed      = "<<seed_global<<"\n";
 			std::cout<<"read_pot  = "<<read_pot<<"\n";
-			std::cout<<"atom_type = "<<atomT<<"\n";
+			std::cout<<"atom_type = "<<atom<<"\n";
 			std::cout<<"format    = "<<format<<"\n";
 			std::cout<<"units     = "<<unitsys<<"\n";
 			std::cout<<"mode      = "<<mode<<"\n";
@@ -2152,7 +2153,7 @@ int main(int argc, char* argv[]){
 		//mode
 		MPI_Bcast(&mode,1,MPI_INT,0,WORLD.mpic());
 		//atom type
-		thread::bcast(WORLD.mpic(),0,atomT);
+		thread::bcast(WORLD.mpic(),0,atom);
 		thread::bcast(WORLD.mpic(),0,annp);
 		//flags - compute
 		MPI_Bcast(&compute.coul,1,MPI_C_BOOL,0,WORLD.mpic());
@@ -2334,7 +2335,7 @@ int main(int argc, char* argv[]){
 				if(BATCH.rank()==0){
 					for(int i=0; i<dist_struc[n].size(); ++i){
 						const std::string& file=files[n][indices[n][dist_struc[n].index(i)]];
-						read_struc(file.c_str(),format,atomT,strucs_org[n][i]);
+						read_struc(file.c_str(),format,atom,strucs_org[n][i]);
 						if(NNPTEFR_PRINT_DATA>1) std::cout<<"\t"<<file<<" "<<strucs_org[n][i].pe()<<"\n";
 					}
 				}
@@ -2402,16 +2403,6 @@ int main(int argc, char* argv[]){
 		//======== set atom properties ========
 		if(WORLD.rank()==0) std::cout<<"setting atomic properties\n";
 		
-		//======== set the indices ========
-		if(WORLD.rank()==0) std::cout<<"setting the indices\n";
-		for(int n=0; n<nData; ++n){
-			for(int i=0; i<strucs_org[n].size(); ++i){
-				for(int j=0; j<strucs_org[n][i].nAtoms(); ++j){
-					strucs_org[n][i].index(j)=j;
-				}
-			}
-		}
-		
 		//======== set the types ========
 		if(WORLD.rank()==0) std::cout<<"setting the types\n";
 		for(int n=0; n<nData; ++n){
@@ -2421,39 +2412,13 @@ int main(int argc, char* argv[]){
 				}
 			}
 		}
-		
-		//======== set the charges ========
-		if(atomT.charge){
-			if(WORLD.rank()==0) std::cout<<"setting charges\n";
-			for(int n=0; n<nData; ++n){
-				for(int i=0; i<strucs_org[n].size(); ++i){
-					for(int j=0; j<strucs_org[n][i].nAtoms(); ++j){
-						strucs_org[n][i].charge(j)=nnpte.nnp_.nnh(strucs_org[n][i].type(j)).type().charge().val();
-					}
-				}
-			}
-		}
-		
-		//======== set the electronegativities ========
-		if(atomT.chi){
-			if(WORLD.rank()==0) std::cout<<"setting electronegativities\n";
-			for(int n=0; n<nData; ++n){
-				for(int i=0; i<strucs_org[n].size(); ++i){
-					for(int j=0; j<strucs_org[n][i].nAtoms(); ++j){
-						strucs_org[n][i].chi(j)=nnpte.nnp_.nnh(strucs_org[n][i].type(j)).type().chi().val();
-					}
-				}
-			}
-		}
-		
-		//======== set the idempotentials ========
-		if(atomT.eta){
-			if(WORLD.rank()==0) std::cout<<"setting idempotentials\n";
-			for(int n=0; n<nData; ++n){
-				for(int i=0; i<strucs_org[n].size(); ++i){
-					for(int j=0; j<strucs_org[n][i].nAtoms(); ++j){
-						strucs_org[n][i].eta(j)=nnpte.nnp_.nnh(strucs_org[n][i].type(j)).type().eta().val();
-					}
+
+		//======== set the masses ========
+		if(WORLD.rank()==0) std::cout<<"setting the masses\n";
+		for(int n=0; n<nData; ++n){
+			for(int i=0; i<strucs_org[n].size(); ++i){
+				for(int j=0; j<strucs_org[n][i].nAtoms(); ++j){
+					strucs_org[n][i].mass(j)=nnpte.nnp().nnh(strucs_org[n][i].type(j)).type().mass();
 				}
 			}
 		}
