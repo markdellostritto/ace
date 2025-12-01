@@ -117,7 +117,7 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 		//====  resize the simulation ==== 
 		if(VASP_PRINT_STATUS>0) std::cout<<"allocating memory\n";
 		Atom atomTl=atom;
-		atomTl.frac=direct;
+		atomTl.frac()=direct;
 		struc.resize(nAtomsT,atomTl);
 		
 		//====  read positions ==== 
@@ -142,7 +142,7 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 		}
 		
 		//==== set species ====
-		if(atom.name){
+		if(atom.name()){
 			int count=0;
 			for(int n=0; n<nSpecies; ++n){
 				for(int m=0; m<nAtoms[n]; ++m){
@@ -152,7 +152,7 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 		}
 		
 		//==== set type ====
-		if(atom.type){
+		if(atom.type()){
 			int count=0;
 			for(int n=0; n<nSpecies; ++n){
 				for(int m=0; m<nAtoms[n]; ++m){
@@ -162,7 +162,7 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 		}
 		
 		//==== set an ====
-		if(atom.an && atom.name){
+		if(atom.an() && atom.name()){
 			int count=0;
 			for(int n=0; n<nSpecies; ++n){
 				for(int m=0; m<nAtoms[n]; ++m){
@@ -173,7 +173,7 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 		}
 		
 		//==== set mass ====
-		if(atom.mass && atom.an){
+		if(atom.mass() && atom.an()){
 			int count=0;
 			for(int n=0; n<nSpecies; ++n){
 				for(int m=0; m<nAtoms[n]; ++m){
@@ -181,7 +181,7 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 					++count;
 				}
 			}
-		} else if(atom.name && atom.mass){
+		} else if(atom.name() && atom.mass()){
 			int count=0;
 			for(int n=0; n<nSpecies; ++n){
 				for(int m=0; m<nAtoms[n]; ++m){
@@ -253,7 +253,7 @@ void write(FILE* writer, const Atom& atom, const Structure& struc){
 		
 		//write positions
 		if(VASP_PRINT_STATUS>0) std::cout<<"writing posns\n";
-		if(!atom.frac){
+		if(!atom.frac()){
 			fprintf(writer,"Cart\n");
 			for(int n=0; n<struc.nAtoms(); ++n){
 				fprintf(writer, "%.8f %.8f %.8f\n",
