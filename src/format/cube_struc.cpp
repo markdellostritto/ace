@@ -92,10 +92,10 @@ void read(const char* file, const Atom& atom, Structure& struc, Grid& grid){
 		Eigen::Vector3d p;
 		std::sscanf(fgets(input,string::M,reader),"%i %lf %lf %lf %lf",&an,&q,&p[0],&p[1],&p[2]);
 		const std::string name=ptable::name(an);
-		if(atom.posn) struc.posn(i)=p*s_len;
-		if(atom.an) struc.an(i)=an;
-		if(atom.an) struc.charge(i)=q;
-		if(atom.name) struc.name(i)=name;
+		if(atom.posn()) struc.posn(i)=p*s_len;
+		if(atom.an()) struc.an(i)=an;
+		if(atom.charge()) struc.charge(i)=q;
+		if(atom.name()) struc.name(i)=name;
 	}
 	
 	//==== read grid ====
