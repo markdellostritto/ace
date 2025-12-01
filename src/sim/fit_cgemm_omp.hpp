@@ -26,7 +26,7 @@ class CGemmType{
 private:
     std::string name_{"NONE"};
     double radius_{0.0};
-    double rvdw_{0.0};
+    double rcut_{0.0};
     double aOver_{0.0};
     double aRep_{0.0};
     double mass_{0.0};
@@ -44,8 +44,8 @@ public:
     const std::string& name()const{return name_;}
     double& radius(){return radius_;}
     const double& radius()const{return radius_;}
-    double& rvdw(){return rvdw_;}
-    const double& rvdw()const{return rvdw_;}
+    double& rcut(){return rcut_;}
+    const double& rcut()const{return rcut_;}
     double& aOver(){return aOver_;}
     const double& aOver()const{return aOver_;}
     double& aRep(){return aRep_;}

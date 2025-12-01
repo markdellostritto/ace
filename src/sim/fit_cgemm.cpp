@@ -58,7 +58,7 @@ double max_aOver=HUGE_VAL;
 //==== operators ====
 
 std::ostream& operator<<(std::ostream& out, const CGemmType& type){
-    return out<<type.name()<<" "<<type.index()<<" "<<type.radius()<<" "<<type.rvdw()<<" "<<type.aOver()<<" "<<type.aRep();
+    return out<<type.name()<<" "<<type.index()<<" "<<type.radius()<<" "<<type.rcut()<<" "<<type.aOver()<<" "<<type.aRep();
 }
 
 //==== member functions ====
@@ -196,6 +196,7 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
                     <<" "<<strucN.type(m)
                     <<" "<<strucN.charge(m)
                     <<" "<<fData_->types[strucN.type(m)].radius()
+                    <<" "<<fData_->types[strucN.type(m)].rcut()
                     <<" "<<fData_->types[strucN.type(m)].aOver()
                     <<" "<<fData_->types[strucN.type(m)].aRep()
                     <<" "<<strucN.posn(m).transpose()
@@ -227,6 +228,7 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
                     <<" "<<strucN.type(m)
                     <<" "<<strucN.charge(m)
                     <<" "<<fData_->types[strucN.type(m)].radius()
+                    <<" "<<fData_->types[strucN.type(m)].rcut()
                     <<" "<<fData_->types[strucN.type(m)].aOver()
                     <<" "<<fData_->types[strucN.type(m)].aRep()
                     <<" "<<strucN.posn(m).transpose()
@@ -268,7 +270,7 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
                     if(opt_weight){
                         for(int m=0; m<strucN.nAtoms(); ++m){
                             const double dr=(r-strucN.posn(m)).norm();
-                            const double Rvdw=fData_->types[strucN.type(m)].rvdw();
+                            const double Rvdw=fData_->types[strucN.type(m)].rcut();
                             w*=0.5*(tanh((dr-Rvdw)/sigma)+1.0);
                         }
                     }
@@ -335,7 +337,7 @@ int main(int argc, char* argv[]){
         double tol=0.0;
         int miter=0;
         nlopt::algorithm algo;
-        double rvdwc=1.0;
+        double srcut=1.0;
     //function data
         FunctionData functionData;
         std::vector<CubeData>& data=functionData.data;
@@ -428,8 +430,8 @@ int main(int argc, char* argv[]){
                 rRep=std::atof(token.next().c_str());
 			} else if(tag=="SIGMA"){
                 sigma=std::atof(token.next().c_str());
-			} else if(tag=="RVDWC"){
-                rvdwc=std::atof(token.next().c_str());
+			} else if(tag=="SRCUT"){
+                srcut=std::atof(token.next().c_str());
 			} 
         }
 
@@ -445,6 +447,8 @@ int main(int argc, char* argv[]){
         if(max_radius<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max radius.");
         if(max_aOver<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max aOver.");
         if(rRep<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid rRep.");
+        if(sigma<=0.0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid sigma.");
+        if(srcut<=0.0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid srcut.");
         
         //==== add CGemm cut to engine ====
         std::cout<<"initializing the engine\n";
@@ -540,7 +544,7 @@ int main(int argc, char* argv[]){
         std::cout<<"max_radius = "<<max_radius<<"\n";
         std::cout<<"max_aOver  = "<<max_aOver<<"\n";
         std::cout<<"sigma      = "<<sigma<<"\n";
-        std::cout<<"rvdwc      = "<<rvdwc<<"\n";
+        std::cout<<"srcut      = "<<srcut<<"\n";
         if(algo==nlopt::LN_SBPLX) std::cout<<"algo  = SBPLX\n";
         else if(algo==nlopt::LN_BOBYQA) std::cout<<"algo  = BOBYQA\n";
         else if(algo==nlopt::LN_COBYLA) std::cout<<"algo  = COBYLA\n";
@@ -574,8 +578,12 @@ int main(int argc, char* argv[]){
                 eIndex=i; break;
             }
             if(types[i].radius()<=0.0) throw std::invalid_argument("Invalid radius.");
+            if(types[i].rcut()<=0.0) throw std::invalid_argument("Invalid rcut.");
             if(types[i].aOver()<0.0) throw std::invalid_argument("Invalid overlap amplitude.");
             if(types[i].aRep()<0.0) throw std::invalid_argument("Invalid repulsive amplitude.");
+        }
+        for(int i=0; i<types.size(); ++i){
+            types[i].rcut()*=srcut;
         }
         if(eIndex<0) throw std::invalid_argument("No electron X found in types.");
 
