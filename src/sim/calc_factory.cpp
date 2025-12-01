@@ -6,8 +6,10 @@
 #include "sim/calc_lj_cut.hpp"
 #include "sim/calc_coul_cut.hpp"
 #include "sim/calc_coul_long.hpp"
-#include "sim/calc_cgem_cut.hpp"
-#include "sim/calc_cgem_long.hpp"
+#include "sim/calc_dipole_cut.hpp"
+#include "sim/calc_dipole_long.hpp"
+#include "sim/calc_thole_cut.hpp"
+#include "sim/calc_thole_long.hpp"
 #include "sim/calc_cgemm_cut.hpp"
 #include "sim/calc_cgemm_long.hpp"
 
@@ -25,11 +27,17 @@ std::shared_ptr<Calculator> make_calc(const Calculator::Name& name, double rc){
         case Calculator::Name::COUL_LONG:{
             ptr.reset(new CalcCoulLong(rc));
         } break;
-        case Calculator::Name::CGEM_CUT:{
-            ptr.reset(new CalcCGemCut(rc));
+        case Calculator::Name::DIPOLE_CUT:{
+            ptr.reset(new CalcDipoleCut(rc));
         } break;
-        case Calculator::Name::CGEM_LONG:{
-            ptr.reset(new CalcCGemLong(rc));
+        case Calculator::Name::DIPOLE_LONG:{
+            ptr.reset(new CalcDipoleLong(rc));
+        } break;
+        case Calculator::Name::THOLE_CUT:{
+            ptr.reset(new CalcTholeCut(rc));
+        } break;
+        case Calculator::Name::THOLE_LONG:{
+            ptr.reset(new CalcTholeLong(rc));
         } break;
         case Calculator::Name::CGEMM_CUT:{
             ptr.reset(new CalcCGemmCut(rc));
@@ -56,11 +64,17 @@ std::shared_ptr<Calculator> copy(const std::shared_ptr<Calculator>& ptr){
         case Calculator::Name::COUL_LONG:{
             ptrnew=std::make_shared<CalcCoulLong>(static_cast<const CalcCoulLong&>(*ptr));
         } break;
-        case Calculator::Name::CGEM_CUT:{
-            ptrnew=std::make_shared<CalcCGemCut>(static_cast<const CalcCGemCut&>(*ptr));
+        case Calculator::Name::DIPOLE_CUT:{
+            ptrnew=std::make_shared<CalcDipoleCut>(static_cast<const CalcDipoleCut&>(*ptr));
         } break;
-        case Calculator::Name::CGEM_LONG:{
-            ptrnew=std::make_shared<CalcCGemLong>(static_cast<const CalcCGemLong&>(*ptr));
+        case Calculator::Name::DIPOLE_LONG:{
+            ptrnew=std::make_shared<CalcDipoleLong>(static_cast<const CalcDipoleLong&>(*ptr));
+        } break;
+        case Calculator::Name::THOLE_CUT:{
+            ptrnew=std::make_shared<CalcTholeCut>(static_cast<const CalcTholeCut&>(*ptr));
+        } break;
+        case Calculator::Name::THOLE_LONG:{
+            ptrnew=std::make_shared<CalcTholeLong>(static_cast<const CalcTholeLong&>(*ptr));
         } break;
         case Calculator::Name::CGEMM_CUT:{
             ptrnew=std::make_shared<CalcCGemmCut>(static_cast<const CalcCGemmCut&>(*ptr));
@@ -92,13 +106,21 @@ std::shared_ptr<Calculator>& read_calc(std::shared_ptr<Calculator>& calc, Token&
             calc.reset(new CalcCoulLong());
             static_cast<CalcCoulLong&>(*calc).read(token);
         }break;
-        case Calculator::Name::CGEM_CUT:{
-            calc.reset(new CalcCGemCut());
-            static_cast<CalcCGemCut&>(*calc).read(token);
+        case Calculator::Name::DIPOLE_CUT:{
+            calc.reset(new CalcDipoleCut());
+            static_cast<CalcDipoleCut&>(*calc).read(token);
         }break;
-        case Calculator::Name::CGEM_LONG:{
-            calc.reset(new CalcCGemLong());
-            static_cast<CalcCGemLong&>(*calc).read(token);
+        case Calculator::Name::DIPOLE_LONG:{
+            calc.reset(new CalcDipoleLong());
+            static_cast<CalcDipoleLong&>(*calc).read(token);
+        }break;
+        case Calculator::Name::THOLE_CUT:{
+            calc.reset(new CalcTholeCut());
+            static_cast<CalcTholeCut&>(*calc).read(token);
+        }break;
+        case Calculator::Name::THOLE_LONG:{
+            calc.reset(new CalcTholeLong());
+            static_cast<CalcTholeLong&>(*calc).read(token);
         }break;
         case Calculator::Name::CGEMM_CUT:{
             calc.reset(new CalcCGemmCut());
@@ -132,8 +154,10 @@ std::ostream& operator<<(std::ostream& out, const std::shared_ptr<Calculator>& c
         case Calculator::Name::LJ_CUT: out<<static_cast<const CalcLJCut&>(*calc); break;
         case Calculator::Name::COUL_CUT: out<<static_cast<const CalcCoulCut&>(*calc); break;
         case Calculator::Name::COUL_LONG: out<<static_cast<const CalcCoulLong&>(*calc); break;
-        case Calculator::Name::CGEM_CUT: out<<static_cast<const CalcCGemCut&>(*calc); break;
-        case Calculator::Name::CGEM_LONG: out<<static_cast<const CalcCGemLong&>(*calc); break;
+        case Calculator::Name::DIPOLE_CUT: out<<static_cast<const CalcDipoleCut&>(*calc); break;
+        case Calculator::Name::DIPOLE_LONG: out<<static_cast<const CalcDipoleLong&>(*calc); break;
+        case Calculator::Name::THOLE_CUT: out<<static_cast<const CalcTholeCut&>(*calc); break;
+        case Calculator::Name::THOLE_LONG: out<<static_cast<const CalcTholeLong&>(*calc); break;
         case Calculator::Name::CGEMM_CUT: out<<static_cast<const CalcCGemmCut&>(*calc); break;
         case Calculator::Name::CGEMM_LONG: out<<static_cast<const CalcCGemmLong&>(*calc); break;
         default: break;
@@ -158,11 +182,17 @@ namespace serialize{
             case Calculator::Name::COUL_LONG:{
                 size+=nbytes(static_cast<const CalcCoulLong&>(*ptr));
             }break;
-            case Calculator::Name::CGEM_CUT:{
-                size+=nbytes(static_cast<const CalcCGemCut&>(*ptr));
+            case Calculator::Name::DIPOLE_CUT:{
+                size+=nbytes(static_cast<const CalcDipoleCut&>(*ptr));
             }break;
-            case Calculator::Name::CGEM_LONG:{
-                size+=nbytes(static_cast<const CalcCGemLong&>(*ptr));
+            case Calculator::Name::DIPOLE_LONG:{
+                size+=nbytes(static_cast<const CalcDipoleLong&>(*ptr));
+            }break;
+            case Calculator::Name::THOLE_CUT:{
+                size+=nbytes(static_cast<const CalcTholeCut&>(*ptr));
+            }break;
+            case Calculator::Name::THOLE_LONG:{
+                size+=nbytes(static_cast<const CalcTholeLong&>(*ptr));
             }break;
             case Calculator::Name::CGEMM_CUT:{
                 size+=nbytes(static_cast<const CalcCGemmCut&>(*ptr));
@@ -189,11 +219,17 @@ namespace serialize{
             case Calculator::Name::COUL_LONG:{
                 pos+=pack(static_cast<const CalcCoulLong&>(*ptr),arr+pos);
             }break;
-            case Calculator::Name::CGEM_CUT:{
-                pos+=pack(static_cast<const CalcCGemCut&>(*ptr),arr+pos);
+            case Calculator::Name::DIPOLE_CUT:{
+                pos+=pack(static_cast<const CalcDipoleCut&>(*ptr),arr+pos);
             }break;
-            case Calculator::Name::CGEM_LONG:{
-                pos+=pack(static_cast<const CalcCGemLong&>(*ptr),arr+pos);
+            case Calculator::Name::DIPOLE_LONG:{
+                pos+=pack(static_cast<const CalcDipoleLong&>(*ptr),arr+pos);
+            }break;
+            case Calculator::Name::THOLE_CUT:{
+                pos+=pack(static_cast<const CalcTholeCut&>(*ptr),arr+pos);
+            }break;
+            case Calculator::Name::THOLE_LONG:{
+                pos+=pack(static_cast<const CalcTholeLong&>(*ptr),arr+pos);
             }break;
             case Calculator::Name::CGEMM_CUT:{
                 pos+=pack(static_cast<const CalcCGemmCut&>(*ptr),arr+pos);
@@ -223,13 +259,21 @@ namespace serialize{
                 ptr=std::make_shared<CalcCoulLong>();
                 pos+=unpack(static_cast<const CalcCoulLong&>(*ptr),arr+pos);
             }break;
-            case Calculator::Name::CGEM_CUT:{
-                ptr=std::make_shared<CalcCGemCut>();
-                pos+=unpack(static_cast<const CalcCGemCut&>(*ptr),arr+pos);
+            case Calculator::Name::DIPOLE_CUT:{
+                ptr=std::make_shared<CalcDipoleCut>();
+                pos+=unpack(static_cast<const CalcDipoleCut&>(*ptr),arr+pos);
             }break;
-            case Calculator::Name::CGEM_LONG:{
-                ptr=std::make_shared<CalcCGemLong>();
-                pos+=unpack(static_cast<const CalcCGemLong&>(*ptr),arr+pos);
+            case Calculator::Name::DIPOLE_LONG:{
+                ptr=std::make_shared<CalcDipoleLong>();
+                pos+=unpack(static_cast<const CalcDipoleLong&>(*ptr),arr+pos);
+            }break;
+            case Calculator::Name::THOLE_CUT:{
+                ptr=std::make_shared<CalcTholeCut>();
+                pos+=unpack(static_cast<const CalcTholeCut&>(*ptr),arr+pos);
+            }break;
+            case Calculator::Name::THOLE_LONG:{
+                ptr=std::make_shared<CalcTholeLong>();
+                pos+=unpack(static_cast<const CalcTholeLong&>(*ptr),arr+pos);
             }break;
             case Calculator::Name::CGEMM_CUT:{
                 ptr=std::make_shared<CalcCGemmCut>();
