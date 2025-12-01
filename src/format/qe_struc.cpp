@@ -218,7 +218,7 @@ void read(const char* file, const Atom& atom, Structure& struc){
 		}*/
 		
 		//read atoms
-		if(atom.posn){
+		if(atom.posn()){
 			Eigen::Vector3d posn;
 			std::vector<int> index(nspecies,0);
 			if(QE_PRINT_STATUS>0) std::cout<<"reading atoms\n";
@@ -248,11 +248,11 @@ void read(const char* file, const Atom& atom, Structure& struc){
 						}
 						if(type<0) throw std::invalid_argument("Invalid species name in atomic positions");
 						//set data
-						if(struc.atom().name) struc.name(i)=name;
-						if(struc.atom().an) struc.an(i)=an;
-						if(struc.atom().mass) struc.mass(i)=ptable::mass(an)*s_mass;
-						if(struc.atom().posn) struc.posn(i)=posn;
-						if(struc.atom().type) struc.type(i)=type;
+						if(struc.atom().name()) struc.name(i)=name;
+						if(struc.atom().an()) struc.an(i)=an;
+						if(struc.atom().mass()) struc.mass(i)=ptable::mass(an)*s_mass;
+						if(struc.atom().posn()) struc.posn(i)=posn;
+						if(struc.atom().type()) struc.type(i)=type;
 						index[type]++;
 					}
 				}
@@ -264,7 +264,7 @@ void read(const char* file, const Atom& atom, Structure& struc){
 		}
 		
 		//read in forces
-		if(atom.force){
+		if(atom.force()){
 			if(QE_PRINT_STATUS>0) std::cout<<"reading forces\n";
 			std::rewind(reader);
 			while(fgets(input,string::M,reader)!=NULL){
@@ -285,7 +285,7 @@ void read(const char* file, const Atom& atom, Structure& struc){
 		}
 		
 		//read in spins
-		/*if(atom.spin){
+		/*if(atom.spin()){
 			if(QE_PRINT_STATUS>0) std::cout<<"reading spins\n";
 			std::rewind(reader);
 			const double fac=1;
@@ -303,7 +303,7 @@ void read(const char* file, const Atom& atom, Structure& struc){
 		}*/
 		
 		//set the types
-		if(atom.type){
+		if(atom.type()){
 			for(int i=0; i<struc.nAtoms(); ++i){
 				for(int j=0; j<species.size(); ++j){
 					if(struc.name(i)==species[j]){
