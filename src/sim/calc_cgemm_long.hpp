@@ -36,7 +36,7 @@ private:
     Eigen::MatrixXd rgammaC_;//reduced expontent - Coulomb
 public:
     //==== contructors/destructors ====
-	CalcCGemmLong(){}
+	CalcCGemmLong():Calculator(Calculator::Name::CGEMM_LONG){}
     CalcCGemmLong(double rc):Calculator(Calculator::Name::CGEMM_LONG,rc){}
 	CalcCGemmLong(double rc, double lambdaC, double lambdaS);
     ~CalcCGemmLong(){}
