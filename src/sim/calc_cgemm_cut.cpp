@@ -323,6 +323,7 @@ namespace serialize{
 		size+=sizeof(int);//ntypes_
         size+=sizeof(double);//lambdaC_
         size+=sizeof(double);//lambdaS_
+		size+=sizeof(double);//rRep_
         size+=nt*sizeof(double);//radius_
 		size+=nt*nt*sizeof(double);//aOver_
         size+=nt*nt*sizeof(double);//aRep_
@@ -342,6 +343,7 @@ namespace serialize{
 		std::memcpy(arr+pos,&obj.ntypes(),sizeof(int)); pos+=sizeof(int);//ntypes_
         std::memcpy(arr+pos,&obj.lambdaC(),sizeof(double)); pos+=sizeof(double);//lambdaC_
         std::memcpy(arr+pos,&obj.lambdaS(),sizeof(double)); pos+=sizeof(double);//lambdaS_
+		std::memcpy(arr+pos,&obj.rRep(),sizeof(double)); pos+=sizeof(double);//rRep_
 		const int nt=obj.ntypes();
 		if(nt>0){
             std::memcpy(arr+pos,obj.radius().data(),nt*sizeof(double)); pos+=nt*sizeof(double);//radius_
@@ -364,6 +366,7 @@ namespace serialize{
 		std::memcpy(&nt,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
 		std::memcpy(&obj.lambdaC(),arr+pos,sizeof(double)); pos+=sizeof(double);//lambdaC_
         std::memcpy(&obj.lambdaS(),arr+pos,sizeof(double)); pos+=sizeof(double);//lambdaS_
+		std::memcpy(&obj.rRep(),arr+pos,sizeof(double)); pos+=sizeof(double);//rRep_
 		obj.resize(nt);
 		if(nt>0){
             std::memcpy(obj.radius().data(),arr+pos,nt*sizeof(double)); pos+=nt*sizeof(double);//radius_
