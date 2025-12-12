@@ -15,11 +15,15 @@ using math::special::fmexp;
 
 //==== contructors/destructors ====
 
-CalcCGemmCut::CalcCGemmCut(double rc, double lambdaC, double lambdaS):Calculator(Calculator::Name::CGEMM_CUT,rc){
+CalcCGemmCut::CalcCGemmCut(double rc, double lambdaC, double lambdaS, double rRep, Calculator::Mix mix):Calculator(Calculator::Name::CGEMM_CUT,rc){
     lambdaC_=lambdaC;
     lambdaS_=lambdaS;
-	if(lambdaC_<=0) throw std::invalid_argument("CalcCGemmCut::CalcCGemmCut(double,double,double): Invalid lambdaC\n");
-    if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmCut::CalcCGemmCut(double,double,double): Invalid lambdaS\n");
+	rRep_=rRep;
+	mix_=mix;
+	if(lambdaC_<=0) throw std::invalid_argument("CalcCGemmCut::CalcCGemmCut(double,double,double,double,Calculator::Mix): Invalid lambdaC\n");
+    if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmCut::CalcCGemmCut(double,double,double,double,Calculator::Mix): Invalid lambdaS\n");
+	if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmCut::CalcCGemmCut(double,double,double,double,Calculator::Mix): Invalid rRep\n");
+	if(mix_==Calculator::Mix::NONE) throw std::invalid_argument("CalcCGemmCut::CalcCGemmCut(double,double,double,double,Calculator::Mix): Invalid rRep\n");
 }
 
 //==== operator ====
@@ -84,12 +88,8 @@ void CalcCGemmCut::read(Token& token){
     static_cast<Calculator&>(*this).read(token);
     lambdaC_=std::atof(token.next().c_str());
     lambdaS_=std::atof(token.next().c_str());
-	if(!token.end()){
-        rRep_=std::atof(token.next().c_str());
-    }
-    if(!token.end()){
-        mix_=Calculator::Mix::read(string::to_upper(token.next()).c_str());
-    }
+	rRep_=std::atof(token.next().c_str());
+    mix_=Calculator::Mix::read(string::to_upper(token.next()).c_str());
     if(lambdaC_<=0) throw std::invalid_argument("CalcCGemmCut::read(Token&): Invalid lambdaC.");
     if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmCut::read(Token&): Invalid lambdaS.");
 	if(rRep_<=0) throw std::invalid_argument("CalcCGemmCut::read(Token&): Invalid rRep.");

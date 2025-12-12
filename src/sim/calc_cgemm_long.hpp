@@ -23,7 +23,7 @@ private:
 	double prec_{1.0e-12};
 	KSpace::Coul coul_;
 	//global parameters
-	Calculator::Mix mix_{Mix::HARMONIC};
+	Calculator::Mix mix_{Mix::NONE};
     double lambdaC_{1.0};//radial scaling factor - Coulomb
     double lambdaS_{1.0};//radial scaling factor - Overlap
 	double rRep_{0.0};
@@ -38,7 +38,7 @@ public:
     //==== contructors/destructors ====
 	CalcCGemmLong():Calculator(Calculator::Name::CGEMM_LONG){}
     CalcCGemmLong(double rc):Calculator(Calculator::Name::CGEMM_LONG,rc){}
-	CalcCGemmLong(double rc, double lambdaC, double lambdaS);
+	CalcCGemmLong(double rc, double lambdaC, double lambdaS, double rRep, Calculator::Mix mix);
     ~CalcCGemmLong(){}
 
     //==== operators ====

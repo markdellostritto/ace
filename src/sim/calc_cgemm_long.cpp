@@ -15,12 +15,16 @@ using math::special::fmexp;
 
 //==== contructors/destructors ====
 
-CalcCGemmLong::CalcCGemmLong(double rc, double lambdaC, double lambdaS):Calculator(Calculator::Name::CGEMM_LONG,rc){
+CalcCGemmLong::CalcCGemmLong(double rc, double lambdaC, double lambdaS, double rRep, Calculator::Mix mix):Calculator(Calculator::Name::CGEMM_LONG,rc){
     mix_=Calculator::Mix::HARMONIC;
 	lambdaC_=lambdaC;
     lambdaS_=lambdaS;
-    if(lambdaC_<=0) throw std::invalid_argument("CalcCGemmLong::CalcCGemmLong(double,double,double): Invalid lambdaC\n");
-    if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmLong::CalcCGemmLong(double,double,double): Invalid lambdaS\n");
+    rRep_=rRep;
+	mix_=mix;
+    if(lambdaC_<=0) throw std::invalid_argument("CalcCGemmLong::CalcCGemmLong(double,double,double,double,Calculator::Mix): Invalid lambdaC\n");
+    if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmLong::CalcCGemmLong(double,double,double,double,Calculator::Mix): Invalid lambdaS\n");
+	if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmLong::CalcCGemmLong(double,double,double,double,Calculator::Mix): Invalid rRep\n");
+	if(mix_==Calculator::Mix::NONE) throw std::invalid_argument("CalcCGemmLong::CalcCGemmLong(double,double,double,double,Calculator::Mix): Invalid rRep\n");
 }
 
 //==== operator ====
@@ -72,6 +76,9 @@ void CalcCGemmLong::init(){
                     if(aRep_(i,i)<ZERO && aRep_(j,j)<ZERO) aRep_(i,j)=0.0;
                     else aRep_(i,j) = 2.0*(aRep_(i,i)*aRep_(j,j))/(aRep_(i,i)+aRep_(j,j));
                 break;
+                default:
+                    throw std::invalid_argument("CalcCGemmLong::init(): Invalid mean.");
+                break;
             }
 			gammaS_(i,j) = 2.0*alphaS[i]*alphaS[j]/(alphaS[i]+alphaS[j]);
             gammaC_(i,j) = 2.0*alphaC[i]*alphaC[j]/(alphaC[i]+alphaC[j]);
@@ -88,12 +95,8 @@ void CalcCGemmLong::read(Token& token){
     lambdaS_=std::atof(token.next().c_str());
     eps_=std::atof(token.next().c_str());
     prec_=std::atof(token.next().c_str());
-    if(!token.end()){
-        rRep_=std::atof(token.next().c_str());
-    }
-    if(!token.end()){
-        mix_=Calculator::Mix::read(string::to_upper(token.next()).c_str());
-    }
+    rRep_=std::atof(token.next().c_str());
+    mix_=Calculator::Mix::read(string::to_upper(token.next()).c_str());
     if(lambdaC_<=0) throw std::invalid_argument("CalcCGemmLong::read(Token&): Invalid lambdaC.");
     if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmLong::read(Token&): Invalid lambdaS.");
     if(prec_<=0) throw std::invalid_argument("CalcCGemmLong::read(Token&): Invalid prec.");

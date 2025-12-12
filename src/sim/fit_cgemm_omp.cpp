@@ -43,7 +43,7 @@ bool opt_radius=false;
 bool opt_aOver=false;
 bool opt_rRep=false;
 bool opt_weight=false;
-double sigma=1.0;
+double sigma=0.0;
 double min_lambda=1.0e-6;
 double min_radius=1.0e-6;
 double min_aOver=1.0e-6;
@@ -58,7 +58,7 @@ double max_aOver=HUGE_VAL;
 //==== operators ====
 
 std::ostream& operator<<(std::ostream& out, const CGemmType& type){
-    return out<<type.name()<<" "<<type.index()<<" "<<type.radius()<<" "<<type.rcut()<<" "<<type.aOver()<<" "<<type.aRep();
+    return out<<type.name()<<" "<<type.index()<<" "<<type.mass()<<" "<<type.radius()<<" "<<type.rcut()<<" "<<type.aOver()<<" "<<type.aRep();
 }
 
 //==== member functions ====
@@ -67,12 +67,12 @@ void CGemmType::read(Token& token){
     name_=token.next();
     mass_=std::atof(token.next().c_str());
     radius_=std::atof(token.next().c_str());
-    rvdw_=std::atof(token.next().c_str());
+    rcut_=std::atof(token.next().c_str());
     aOver_=std::atof(token.next().c_str());
     aRep_=std::atof(token.next().c_str());
     if(mass_<0) throw std::invalid_argument("CGemmType::read(Token&): invalid mass.");
     if(radius_<0) throw std::invalid_argument("CGemmType::read(Token&): invalid radius.");
-    if(rvdw_<0) throw std::invalid_argument("CGemmType::read(Token&): invalid rcut.");
+    if(rcut_<0) throw std::invalid_argument("CGemmType::read(Token&): invalid rcut.");
     if(aOver_<0) throw std::invalid_argument("CGemmType::read(Token&): invalid overlap amplitude.");
     if(aRep_<0) throw std::invalid_argument("CGemmType::read(Token&): invalid repulsive amplitude.");
 }
@@ -102,7 +102,7 @@ double objf(const std::vector<double> &x, std::vector<double> &grad, void* fData
     for(int i=0; i<ntypes; ++i) calcCGemmCut.aRep()(i,i)=fData_.types[i].aRep();
     if(opt_rRep) calcCGemmCut.rRep()=x[c++];
     calcCGemmCut.init();
-
+    
     //==== unpack the parameters - types ====
     c=0;
     if(opt_lambda) c+=2;
@@ -342,11 +342,12 @@ int main(int argc, char* argv[]){
         double rc=0;//cutoff
         double lambdaC=1.0;//initial guess for lambdaC
         double lambdaS=1.0;//initial guess for lambdaS
-        double rRep=0.05;
+        double rRep=0.0;
         double tol=0.0;
         int miter=0;
         nlopt::algorithm algo;
         double srcut=1.0;
+        Calculator::Mix mix=Calculator::Mix::NONE;
     //function data
         FunctionData functionData;
         std::vector<CubeData>& data=functionData.data;
@@ -441,7 +442,9 @@ int main(int argc, char* argv[]){
                 sigma=std::atof(token.next().c_str());
 			} else if(tag=="SRCUT"){
                 srcut=std::atof(token.next().c_str());
-			} 
+			} else if(tag=="MIX"){
+                mix=Calculator::Mix::read(string::to_upper(token.next()).c_str());
+            }
         }
 
         //=== close the parameter file ====
@@ -452,25 +455,25 @@ int main(int argc, char* argv[]){
         if(min_lambda<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid min lambda.");
         if(min_radius<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid min radius.");
         if(min_aOver<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid min aOver.");
-        if(max_lambda<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max lambda.");
-        if(max_radius<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max radius.");
-        if(max_aOver<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max aOver.");
-        if(rRep<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid rRep.");
+        if(max_lambda<=0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max lambda.");
+        if(max_radius<=0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max radius.");
+        if(max_aOver<=0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max aOver.");
+        if(rRep<=0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid rRep.");
         if(sigma<=0.0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid sigma.");
         if(srcut<=0.0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid srcut.");
-        
+        if(mix==Calculator::Mix::NONE) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid mix.");
+
         //==== add CGemm cut to engine ====
         std::cout<<"initializing the engine\n";
         const int ntypes=types.size();
         engine.calcs().push_back(
-            std::make_shared<CalcCGemmCut>(rc,lambdaC,lambdaS)
+            std::make_shared<CalcCGemmCut>(rc,lambdaC,lambdaS,rRep,mix)
         );
         engine.constraints().push_back(
             std::make_shared<ConstraintFreeze>()
         );
         engine.resize(ntypes);
         engine.init();
-        static_cast<CalcCGemmCut&>(*engine.calcs().back()).rRep()=rRep;
         
         //==== make the type map ====
         std::cout<<"making the type map\n";
@@ -530,12 +533,13 @@ int main(int argc, char* argv[]){
         std::cout<<print::buf(strbuf)<<"\n";
         std::cout<<engine<<"\n";
         std::cout<<print::title("MD",strbuf)<<"\n";
-        std::cout<<"rcut     = "<<rc<<"\n";
-        std::cout<<"lambdaC  = "<<lambdaC<<"\n";
-        std::cout<<"lambdaS  = "<<lambdaS<<"\n";
-        std::cout<<"rrep     = "<<rRep<<"\n";
-        std::cout<<"nsteps   = "<<functionData.nsteps<<"\n";
-        std::cout<<"ftol     = "<<functionData.ftol<<"\n";
+        std::cout<<"rcut    = "<<rc<<"\n";
+        std::cout<<"lambdaC = "<<lambdaC<<"\n";
+        std::cout<<"lambdaS = "<<lambdaS<<"\n";
+        std::cout<<"rrep    = "<<rRep<<"\n";
+        std::cout<<"mix     = "<<mix<<"\n";
+        std::cout<<"nsteps  = "<<functionData.nsteps<<"\n";
+        std::cout<<"ftol    = "<<functionData.ftol<<"\n";
         std::cout<<print::buf(strbuf)<<"\n";
 		std::cout<<print::title("OPT",strbuf)<<"\n";
         std::cout<<"dim        = "<<dim<<"\n";
@@ -789,9 +793,14 @@ int main(int argc, char* argv[]){
 		
         //compute the potential
         std::cout<<"computing the potential\n";
+        std::vector<double> xmin(data.size(),1000.0);
+        std::vector<double> error(data.size(),0.0);
+        std::vector<int> nshell(data.size(),0);
         for(int n=0; n<data.size(); ++n){
+            //compute potential
             Grid& espA=data[n].espA();
             Grid& espN=data[n].espN();
+            Structure& strucA=data[n].strucA();
             Structure& strucN=data[n].strucN();
             CalcCGemmCut& calcCGemmCut=static_cast<CalcCGemmCut&>(*engine.calcs().back());
             const Eigen::Vector3i& npts=espA.n();
@@ -812,16 +821,16 @@ int main(int argc, char* argv[]){
                     }
                 }
             }
-            double error=0;
+            //compute error
             for(int i=0; i<npts[0]; ++i){
                 for(int j=0; j<npts[1]; ++j){
                     for(int k=0; k<npts[2]; ++k){
-                        error+=std::fabs(espN(i,j,k)-espA(i,j,k));
+                        error[n]+=std::fabs(espN(i,j,k)-espA(i,j,k));
                     }
                 }
             }
-            error/=espA.np();
-            std::cout<<"error["<<n<<"] = "<<error<<"\n";
+            error[n]/=espA.np();
+            //scale potential for output
             for(int i=0; i<npts[0]; ++i){
                 for(int j=0; j<npts[1]; ++j){
                     for(int k=0; k<npts[2]; ++k){
@@ -829,8 +838,34 @@ int main(int argc, char* argv[]){
                     }
                 }
             }
+            //compute min distance
+            const int nCores=strucA.nAtoms();
+            const int nTotal=strucN.nAtoms();
+            const int nShells=nTotal-nCores;
+            nshell[n]=nShells;
+            for(int i=nCores; i<nTotal; ++i){
+                for(int j=i+1; j<nTotal; ++j){
+                    const double dist=(strucN.posn(j)-strucN.posn(i)).norm();
+                    if(dist<xmin[n]) xmin[n]=dist;
+                }
+            }
+            //write cube
             std::string filename="out_n"+std::to_string(n)+".cube";
             CUBE::write(filename.c_str(),atom,strucN,espN);
+        }
+        
+        // print data
+        std::cout<<"printing error\n";
+        for(int n=0; n<data.size(); ++n){
+            std::cout<<"error["<<n<<"] = "<<error[n]<<"\n";
+        }
+        std::cout<<"printing xmin\n";
+        for(int n=0; n<data.size(); ++n){
+            std::cout<<"xmin["<<n<<"] = "<<xmin[n]<<"\n";
+        }
+        std::cout<<"printing nshell\n";
+        for(int n=0; n<data.size(); ++n){
+            std::cout<<"nshell["<<n<<"] = "<<nshell[n]<<"\n";
         }
     }catch(std::exception& e){
 		std::cout<<"ERROR in fit_CGemm::main(int,char**):\n";

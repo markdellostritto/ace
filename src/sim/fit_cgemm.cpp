@@ -43,7 +43,7 @@ bool opt_radius=false;
 bool opt_aOver=false;
 bool opt_rRep=false;
 bool opt_weight=false;
-double sigma=1.0;
+double sigma=0.0;
 double min_lambda=1.0e-6;
 double min_radius=1.0e-6;
 double min_aOver=1.0e-6;
@@ -58,7 +58,7 @@ double max_aOver=HUGE_VAL;
 //==== operators ====
 
 std::ostream& operator<<(std::ostream& out, const CGemmType& type){
-    return out<<type.name()<<" "<<type.index()<<" "<<type.radius()<<" "<<type.rcut()<<" "<<type.aOver()<<" "<<type.aRep();
+    return out<<type.name()<<" "<<type.index()<<" "<<type.mass()<<" "<<type.radius()<<" "<<type.rcut()<<" "<<type.aOver()<<" "<<type.aRep();
 }
 
 //==== member functions ====
@@ -333,11 +333,12 @@ int main(int argc, char* argv[]){
         double rc=0;//cutoff
         double lambdaC=1.0;//initial guess for lambdaC
         double lambdaS=1.0;//initial guess for lambdaS
-        double rRep=0.05;
+        double rRep=0.0;
         double tol=0.0;
         int miter=0;
         nlopt::algorithm algo;
         double srcut=1.0;
+        Calculator::Mix mix=Calculator::Mix::NONE;
     //function data
         FunctionData functionData;
         std::vector<CubeData>& data=functionData.data;
@@ -432,7 +433,9 @@ int main(int argc, char* argv[]){
                 sigma=std::atof(token.next().c_str());
 			} else if(tag=="SRCUT"){
                 srcut=std::atof(token.next().c_str());
-			} 
+			} else if(tag=="MIX"){
+                mix=Calculator::Mix::read(string::to_upper(token.next()).c_str());
+            }
         }
 
         //=== close the parameter file ====
@@ -443,26 +446,26 @@ int main(int argc, char* argv[]){
         if(min_lambda<0) throw std::invalid_argument("Error in fit_cgemm(int,char**): Invalid min lambda.");
         if(min_radius<0) throw std::invalid_argument("Error in fit_cgemm(int,char**): Invalid min radius.");
         if(min_aOver<0) throw std::invalid_argument("Error in fit_cgemm(int,char**): Invalid min aOver.");
-        if(max_lambda<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max lambda.");
-        if(max_radius<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max radius.");
-        if(max_aOver<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid max aOver.");
-        if(rRep<0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid rRep.");
-        if(sigma<=0.0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid sigma.");
-        if(srcut<=0.0) throw std::invalid_argument("Error in fit_cgemm_omp(int,char**): Invalid srcut.");
+        if(max_lambda<=0) throw std::invalid_argument("Error in fit_cgemm(int,char**): Invalid max lambda.");
+        if(max_radius<=0) throw std::invalid_argument("Error in fit_cgemm(int,char**): Invalid max radius.");
+        if(max_aOver<=0) throw std::invalid_argument("Error in fit_cgemm(int,char**): Invalid max aOver.");
+        if(rRep<=0) throw std::invalid_argument("Error in fit_cgemm(int,char**): Invalid rRep.");
+        if(sigma<=0.0) throw std::invalid_argument("Error in fit_cgemm(int,char**): Invalid sigma.");
+        if(srcut<=0.0) throw std::invalid_argument("Error in fit_cgemm(int,char**): Invalid srcut.");
+        if(mix==Calculator::Mix::NONE) throw std::invalid_argument("Error in fit_cgemm(int,char**): Invalid mix.");
         
         //==== add CGemm cut to engine ====
         std::cout<<"initializing the engine\n";
         const int ntypes=types.size();
         engine.calcs().push_back(
-            std::make_shared<CalcCGemmCut>(rc,lambdaC,lambdaS)
+            std::make_shared<CalcCGemmCut>(rc,lambdaC,lambdaS,rRep,mix)
         );
         engine.constraints().push_back(
             std::make_shared<ConstraintFreeze>()
         );
         engine.resize(ntypes);
         engine.init();
-        static_cast<CalcCGemmCut&>(*engine.calcs().back()).rRep()=rRep;
-
+        
         //==== make the type map ====
         std::cout<<"making the type map\n";
         std::map<std::string,int> type_map;
@@ -521,12 +524,13 @@ int main(int argc, char* argv[]){
         std::cout<<print::buf(strbuf)<<"\n";
         std::cout<<engine<<"\n";
         std::cout<<print::title("MD",strbuf)<<"\n";
-        std::cout<<"rcut     = "<<rc<<"\n";
-        std::cout<<"lambdaC  = "<<lambdaC<<"\n";
-        std::cout<<"lambdaS  = "<<lambdaS<<"\n";
-        std::cout<<"rrep     = "<<rRep<<"\n";
-        std::cout<<"nsteps   = "<<functionData.nsteps<<"\n";
-        std::cout<<"ftol     = "<<functionData.ftol<<"\n";
+        std::cout<<"rcut    = "<<rc<<"\n";
+        std::cout<<"lambdaC = "<<lambdaC<<"\n";
+        std::cout<<"lambdaS = "<<lambdaS<<"\n";
+        std::cout<<"rrep    = "<<rRep<<"\n";
+        std::cout<<"mix     = "<<mix<<"\n";
+        std::cout<<"nsteps  = "<<functionData.nsteps<<"\n";
+        std::cout<<"ftol    = "<<functionData.ftol<<"\n";
         std::cout<<print::buf(strbuf)<<"\n";
 		std::cout<<print::title("OPT",strbuf)<<"\n";
         std::cout<<"dim        = "<<dim<<"\n";

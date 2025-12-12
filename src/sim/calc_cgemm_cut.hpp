@@ -18,7 +18,7 @@
 class CalcCGemmCut: public Calculator{
 private:
 	//global parameters
-	Calculator::Mix mix_{Mix::HARMONIC};
+	Calculator::Mix mix_{Mix::NONE};
     double lambdaC_{1.0};//radial scaling factor - Coulomb
     double lambdaS_{1.0};//radial scaling factor - Overlap
 	double rRep_{0.0};//repulsive radius
@@ -33,7 +33,7 @@ public:
     //==== contructors/destructors ====
 	CalcCGemmCut():Calculator(Calculator::Name::CGEMM_CUT){}
     CalcCGemmCut(double rc):Calculator(Calculator::Name::CGEMM_CUT,rc){}
-	CalcCGemmCut(double rc, double lambdaC, double lambdaS);
+	CalcCGemmCut(double rc, double lambdaC, double lambdaS, double rRep, Calculator::Mix mix);
     ~CalcCGemmCut(){}
 
     //==== operators ====
