@@ -18,13 +18,13 @@
 
 class CalcCoulLong: public Calculator{
 private:
-	double eps_;
-	double prec_;
-	KSpace::Coul coul_;
+	double eps_{1.0};
+	double prec_{1.0e-6};
+	KSpace::Coul kCoul_;
 public:
 	//==== constructors/destructors ====
-	CalcCoulLong();
-	CalcCoulLong(double rc);
+	CalcCoulLong():Calculator(Calculator::Name::COUL_LONG){}
+	CalcCoulLong(double rc):Calculator(Calculator::Name::COUL_LONG,rc){};
 	~CalcCoulLong(){}
 	
 	//==== operator ====
@@ -35,12 +35,11 @@ public:
 	const double& prec()const{return prec_;}
 	double& eps(){return eps_;}
 	const double& eps()const{return eps_;}
-	KSpace::Coul& coul(){return coul_;}
-	const KSpace::Coul& coul()const{return coul_;}
+	KSpace::Coul& kCoul(){return kCoul_;}
+	const KSpace::Coul& kCoul()const{return kCoul_;}
 	
 	//==== member functions ====
-    void resize(int ntypes){}
-	void init();
+    void init();
 	void init(const Structure& struc);
 	void read(Token& token);
 	void coeff(Token& token){}

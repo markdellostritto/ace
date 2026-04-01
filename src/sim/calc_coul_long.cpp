@@ -10,18 +10,6 @@
 using math::constants::RadPI;
 using math::constants::ZERO;
 
-//==== constructors/destructors ====
-
-CalcCoulLong::CalcCoulLong():Calculator(Calculator::Name::COUL_LONG){
-    eps_=1.0;
-    prec_=1.0e-6;
-}
-
-CalcCoulLong::CalcCoulLong(double rc):Calculator(Calculator::Name::COUL_LONG,rc){
-    eps_=1.0;
-    prec_=1.0e-6;
-}
-
 //==== operator ====
 
 std::ostream& operator<<(std::ostream& out, const CalcCoulLong& calc){
@@ -38,25 +26,25 @@ void CalcCoulLong::read(Token& token){
 	if(!token.end()){
 		eps_=std::atof(token.next().c_str());
 		if(eps_<=0.0) throw std::invalid_argument("CalcCoulLong::read(Token&): Invalid epsilon.");
-		coul_.eps()=eps_;
+		kCoul_.eps()=eps_;
 	}
 }
 
 void CalcCoulLong::init(){
-	coul_.prec()=prec_;
-	coul_.rc()=rc_;
+	kCoul_.prec()=prec_;
+	kCoul_.rc()=rc_;
 }
 
 void CalcCoulLong::init(const Structure& struc){
-	coul_.init(struc);
+	kCoul_.init(struc);
 }
 
 double CalcCoulLong::energy(Structure& struc, const NeighborList& nlist)const{
 	const double ke=units::Consts::ke()*eps_;
 	// k-space
-	//coul_.init(struc);
-	const double energyK=coul_.energy(struc);
-	const double a=coul_.alpha();
+	//kCoul_.init(struc);
+	const double energyK=kCoul_.energy(struc);
+	const double a=kCoul_.alpha();
 	// r-space
 	double energyR=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -87,9 +75,9 @@ double CalcCoulLong::energy(Structure& struc, const NeighborList& nlist)const{
 double CalcCoulLong::compute(Structure& struc, const NeighborList& nlist)const{
 	const double ke=units::Consts::ke()*eps_;
 	// k-space
-	//coul_.init(struc);
-	const double energyK=coul_.compute(struc);
-	const double a=coul_.alpha();
+	//kCoul_.init(struc);
+	const double energyK=kCoul_.compute(struc);
+	const double a=kCoul_.alpha();
 	// r-space
 	double energyR=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
