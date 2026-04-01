@@ -40,12 +40,11 @@ public:
     //==== member functions ====
     void resize(int ntypes);
 	void init();
-	void read(Token& token);
 	void coeff(Token& token);
-	double energy(Structure& struc, const NeighborList& nlist);
-	double energy(Structure& struc);
-	double compute(Structure& struc, const NeighborList& nlist);
-	double compute(Structure& struc);
+	double energy(Structure& struc, const NeighborList& nlist)const;
+	double energy(Structure& struc)const;
+	double compute(Structure& struc, const NeighborList& nlist)const;
+	double compute(Structure& struc)const;
 };
 
 //**********************************************

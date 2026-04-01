@@ -11,8 +11,7 @@ std::ostream& operator<<(std::ostream& out, const CalcLJCut& calc){
 
 void CalcLJCut::resize(int ntypes){
     if(CALC_LJ_CUT_PRINT_FUNC>0) std::cout<<"CalcLJCut::resize(int):\n";
-	if(ntypes<0) throw std::invalid_argument("CalcLJCut::resize(int): Invalid number of types.");
-	ntypes_=ntypes;
+	Calculator::resize(ntypes);
 	if(ntypes_>0){
 		f_=Eigen::MatrixXi::Zero(ntypes_,ntypes_);
 		s_=Eigen::MatrixXd::Zero(ntypes_,ntypes_);
@@ -25,7 +24,6 @@ void CalcLJCut::init(){
 	for(int i=0; i<ntypes_; ++i){
 		for(int j=i; j<ntypes_; ++j){
 			if(f_(i,j)==0){
-				//s_(i,j)=0.5*(s_(i,i)+s_(j,j));
 				s_(i,j)=sqrt(s_(i,i)*s_(j,j));
 				s_(j,i)=s_(i,j);
 				e_(i,j)=sqrt(e_(i,i)*e_(j,j));
@@ -36,13 +34,9 @@ void CalcLJCut::init(){
 	}
 }
 
-void CalcLJCut::read(Token& token){
-    static_cast<Calculator&>(*this).read(token);
-}
-
 void CalcLJCut::coeff(Token& token){
     if(CALC_LJ_CUT_PRINT_FUNC>0) std::cout<<"CalcLJCut::coeff(Token&):\n";
-	//coeff lj_cut type1 type2 eps sigma
+	//coeff type1 type2 eps sigma
 	const int t1=std::atoi(token.next().c_str())-1;
 	const int t2=std::atoi(token.next().c_str())-1;
 	const double eps=std::atof(token.next().c_str());
@@ -64,7 +58,7 @@ void CalcLJCut::coeff(Token& token){
 	}
 }
 
-double CalcLJCut::energy(Structure& struc, const NeighborList& nlist){
+double CalcLJCut::energy(Structure& struc, const NeighborList& nlist)const{
     if(CALC_LJ_CUT_PRINT_FUNC>0) std::cout<<"CalcLJCut::energy(const Structure&,const NeighborList&):\n";
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -85,7 +79,7 @@ double CalcLJCut::energy(Structure& struc, const NeighborList& nlist){
 	return energy;
 }
 
-double CalcLJCut::energy(Structure& struc){
+double CalcLJCut::energy(Structure& struc)const{
     if(CALC_LJ_CUT_PRINT_FUNC>0) std::cout<<"CalcLJCut::energy(const Structure&):\n";
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -104,7 +98,7 @@ double CalcLJCut::energy(Structure& struc){
 	return energy;
 }
 
-double CalcLJCut::compute(Structure& struc, const NeighborList& nlist){
+double CalcLJCut::compute(Structure& struc, const NeighborList& nlist)const{
     if(CALC_LJ_CUT_PRINT_FUNC>0) std::cout<<"CalcLJCut::compute(const Structure&,const NeighborList&):\n";
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -129,7 +123,7 @@ double CalcLJCut::compute(Structure& struc, const NeighborList& nlist){
 	return energy;
 }
 
-double CalcLJCut::compute(Structure& struc){
+double CalcLJCut::compute(Structure& struc)const{
     if(CALC_LJ_CUT_PRINT_FUNC>0) std::cout<<"CalcLJCut::compute(const Structure&):\n";
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
