@@ -56,4 +56,31 @@ public:
 	virtual double compute(Structure& struc){return 0.0;}
 };
 
+//**********************************************
+// serialization
+//**********************************************
+	
+namespace serialize{
+	
+	//**********************************************
+	// byte measures
+	//**********************************************
+	
+	template <> int nbytes(const Constraint& obj);
+	
+	
+	//**********************************************
+	// packing
+	//**********************************************
+	
+	template <> int pack(const Constraint& obj, char* arr);
+	
+	//**********************************************
+	// unpacking
+	//**********************************************
+	
+	template <> int unpack(Constraint& obj, const char* arr);
+	
+}
+
 #endif

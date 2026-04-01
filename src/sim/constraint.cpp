@@ -48,3 +48,48 @@ void Constraint::read(Token& token){
 		for(int i=beg; i<=end; i+=stride) indices_.push_back(i);
 	}
 }
+
+//**********************************************
+// serialization
+//**********************************************
+	
+namespace serialize{
+	
+	//**********************************************
+	// byte measures
+	//**********************************************
+	
+	template <> int nbytes(const Constraint& obj){
+		int size=0;
+		size+=sizeof(int);//indices
+		size+=sizeof(int)*obj.indices().size();
+		return size;
+	}
+	
+	
+	//**********************************************
+	// packing
+	//**********************************************
+	
+	template <> int pack(const Constraint& obj, char* arr){
+		int pos=0;
+		const int size=obj.indices().size();
+		std::memcpy(arr+pos,&size,sizeof(int)); pos+=sizeof(int);//size
+		std::memcpy(arr+pos,obj.indices().data(),sizeof(int)*size); pos+=sizeof(int)*size;//indices
+		return pos;
+	}
+	
+	//**********************************************
+	// unpacking
+	//**********************************************
+	
+	template <> int unpack(Constraint& obj, const char* arr){
+		int pos=0;
+		int size=0;
+		std::memcpy(&size,arr+pos,sizeof(int)); pos+=sizeof(int);//size
+		obj.indices().resize(size);
+		std::memcpy(obj.indices().data(),arr+pos,sizeof(int)*size); pos+=sizeof(int)*size;//indices
+		return pos;
+	}
+	
+}
