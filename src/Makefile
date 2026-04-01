@@ -30,15 +30,16 @@ mem = serialize.o map.o
 opt = loss.o stop.o algo.o objective.o decay.o iter.o
 constraint = constraint.o constraint_factory.o constraint_freeze.o 
 sim = engine.o integrator.o job.o
-kspaces = kspace.o kspace_coul.o kspace_dipole.o
+kspaces = kspace.o kspace_coul.o kspace_dipole.o kspace_london.o
 thread = comm.o dist.o
 signal = fft.o window.o
 neural = batch.o nn.o 
 basis = basis.o basis_radial.o basis_angular.o
 nnp = nnh.o nnp.o cutoff.o 
 calc = calc.o calc_factory.o \
-       calc_lj_cut.o \
+       calc_lj_cut.o calc_lj_long.o \
        calc_coul_cut.o calc_coul_long.o \
+       calc_grho_cut.o calc_grho_long.o \
        calc_dipole_cut.o calc_dipole_long.o \
        calc_thole_cut.o calc_thole_long.o \
        calc_cgemm_cut.o calc_cgemm_long.o
@@ -219,10 +220,16 @@ calc_factory.o: sim/calc_factory.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_factory.cpp
 calc_lj_cut.o: sim/calc_lj_cut.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_lj_cut.cpp
+calc_lj_long.o: sim/calc_lj_long.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_lj_long.cpp
 calc_coul_cut.o: sim/calc_coul_cut.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_coul_cut.cpp
 calc_coul_long.o: sim/calc_coul_long.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_coul_long.cpp
+calc_grho_cut.o: sim/calc_grho_cut.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_grho_cut.cpp
+calc_grho_long.o: sim/calc_grho_long.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_grho_long.cpp
 calc_dipole_cut.o: sim/calc_dipole_cut.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_dipole_cut.cpp
 calc_dipole_long.o: sim/calc_dipole_long.cpp
@@ -253,6 +260,8 @@ kspace_coul.o: sim/kspace_coul.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/kspace_coul.cpp
 kspace_dipole.o: sim/kspace_dipole.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/kspace_dipole.cpp
+kspace_london.o: sim/kspace_london.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/kspace_london.cpp
 
 ##################################################################################
 # TARGETS
@@ -268,9 +277,6 @@ test_math_special: special.o print.o reduce.o
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o test_math_special.exe math/test_math_special.cpp special.o print.o reduce.o
 test_math_reduce: reduce.o print.o
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o test_math_reduce.exe math/test_math_reduce.cpp reduce.o print.o
-# chem
-test_units: units.o print.o
-	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o test_units.exe chem/test_units.cpp units.o print.o
 # string
 test_token: $(str)
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o test_token.exe str/test_token.cpp $(str)
@@ -304,8 +310,6 @@ test_nnp_symm: $(basis) $(mem) $(struc) $(str) $(math) nnh.o nnp.o nn.o cutoff.o
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o test_nnp_symm.exe nnp/test_nnp_symm.cpp $(basis) $(mem) $(struc) $(str) $(math) nnh.o nnp.o nn.o cutoff.o 
 test_nnp_force: $(mem) $(struc) $(fstruc) $(str) $(math) $(chem) $(basis) $(nnp) $(neural) $(opt) $(thread) grid.o
 	$(CXX_THREAD) $(CXX_FLAGS) $(INC) -o test_nnp_force.exe nnp/test_nnp_force.cpp $(mem) $(struc) $(fstruc) $(str) $(math) $(chem) $(basis) $(nnp) $(neural) $(opt) $(thread) grid.o
-nnptefr2: $(nnp) $(str) $(math) $(mem) $(thread) $(basis) $(struc) $(fstruc) $(chem) $(kspaces) $(opt) $(neural) $(util) $(calc) $(constraint) format.o alias.o pca.o grid.o engine.o integrator.o 
-	$(CXX_THREAD) $(CXX_FLAGS) $(INC) -o nnptefr2.exe nnp/nnptefr2.cpp $(nnp) $(str) $(math) $(mem) $(thread) $(basis) $(struc) $(fstruc) $(chem) $(kspaces) $(opt) $(neural) $(util) $(calc) $(constraint) format.o alias.o pca.o grid.o engine.o integrator.o 
 nnptefr: $(nnp) $(str) $(math) $(mem) $(thread) $(basis) $(struc) $(fstruc) $(chem) $(kspaces) $(opt) $(neural) $(util) $(calc) $(constraint) format.o alias.o pca.o grid.o engine.o integrator.o
 	$(CXX_THREAD) $(CXX_FLAGS) $(INC) -o nnptefr.exe nnp/nnptefr.cpp $(nnp) $(str) $(math) $(mem) $(thread) $(basis) $(struc) $(fstruc) $(chem) $(kspaces) $(opt) $(neural) $(util) $(calc) $(constraint) format.o alias.o pca.o grid.o engine.o integrator.o 
 
@@ -313,6 +317,6 @@ nnptefr: $(nnp) $(str) $(math) $(mem) $(thread) $(basis) $(struc) $(fstruc) $(ch
 
 vdos: $(struc) trajectory.o interval.o group.o format.o $(ftraj) $(str) $(mem) $(chem) $(math) $(signal) 
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o vdos.exe spectra/vdos.cpp $(struc) trajectory.o interval.o group.o format.o $(ftraj) $(str) $(mem) $(chem) $(math) $(signal) -lfftw3
-raman_thole: $(struc) trajectory.o interval.o group.o format.o $(ftraj) $(str) $(mem) $(chem) $(math) $(signal) $(kspaces) $(calc) thole.o 
+raman_thole: $(struc) trajectory.o interval.o group.o format.o $(ftraj) $(str) $(mem) $(chem) $(math) $(signal) $(kspaces) $(calc) thole.o
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o raman_thole.exe spectra/raman_thole.cpp $(struc) trajectory.o interval.o group.o format.o $(ftraj) $(str) $(mem) $(chem) $(math) $(signal) $(kspaces) $(calc) thole.o -lfftw3
 
