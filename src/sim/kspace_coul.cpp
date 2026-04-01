@@ -37,7 +37,6 @@ void Coul::init(const Structure& struc){
 	const Eigen::Matrix3d& R=struc.R();
 	const Eigen::Matrix3d& K=struc.K();
 	const Eigen::Vector3d L=(Eigen::Vector3d()<<R.col(0).norm(),R.col(1).norm(),R.col(2).norm()).finished();
-	//Eigen::Vector3d L; L<<R.col(0).norm(),R.col(1).norm(),R.col(2).norm();
 	q2_=0;
 	for(int i=0; i<N; ++i) q2_+=struc.charge(i)*struc.charge(i);
 	if(q2_==0) throw std::invalid_argument("KSpace::Coul::init(const Structure&): zero abs charge.");

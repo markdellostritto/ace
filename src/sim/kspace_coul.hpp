@@ -25,24 +25,24 @@ namespace KSpace{
 
 class Coul: public Base{
 private:
-	double eps_;
-	double q2_;//sum of squares of charges
-	double vc_;//constant term
+	double eps_{1.0};
+	double q2_{0.0};//sum of squares of charges
+	double vc_{0.0};//constant term
 	mutable std::vector<double> c_;
 	mutable std::vector<double> s_;
 public:
 	//==== constructors/destructors ====
-	Coul():eps_(1.0){}
+	Coul(){}
 	virtual ~Coul(){}
 	
 	//==== operators ====
 	friend std::ostream& operator<<(std::ostream& out, const Coul& c);
 	
 	//==== access ====
-	const double& q2()const{return q2_;}
-	const double& vc()const{return vc_;}
 	double& eps(){return eps_;}
 	const double& eps()const{return eps_;}
+	const double& q2()const{return q2_;}
+	const double& vc()const{return vc_;}
 	
 	//==== member functions ====
 	void init(const Structure& struc);
