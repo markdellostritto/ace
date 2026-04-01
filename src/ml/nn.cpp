@@ -85,6 +85,7 @@ std::ostream& operator<<(std::ostream& out, const Neuron& neuron){
 		case Neuron::SOFTPLUS: out<<"SOFTPLUS"; break;
 		case Neuron::SQPLUS: out<<"SQPLUS"; break;
 		case Neuron::ATISH: out<<"ATISH"; break;
+		case Neuron::IERF: out<<"IERF"; break;
 		case Neuron::TEST: out<<"TEST"; break;
 		default: out<<"NONE"; break;
 	}
@@ -110,6 +111,7 @@ const char* Neuron::name(const Neuron& neuron){
 		case Neuron::SOFTPLUS: return "SOFTPLUS";
 		case Neuron::SQPLUS: return "SQPLUS";
 		case Neuron::ATISH: return "ATISH";
+		case Neuron::IERF: return "IERF";
 		case Neuron::TEST: return "TEST";
 		default: return "NONE";
 	}
@@ -133,6 +135,7 @@ Neuron Neuron::read(const char* str){
 	else if(std::strcmp(str,"SOFTPLUS")==0) return Neuron::SOFTPLUS;
 	else if(std::strcmp(str,"SQPLUS")==0) return Neuron::SQPLUS;
 	else if(std::strcmp(str,"ATISH")==0) return Neuron::ATISH;
+	else if(std::strcmp(str,"IERF")==0) return Neuron::IERF;
 	else if(std::strcmp(str,"TEST")==0) return Neuron::TEST;
 	else return Neuron::NONE;
 }
@@ -159,7 +162,7 @@ void AFFPBP2::af_lin(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2){
 	for(int i=0; i<size; ++i) d2[i]=0.0;
 }
 
-//sigmoidal
+//sigmoid
 
 void AFFP::af_sigmoid(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
@@ -208,6 +211,8 @@ void AFFPBP2::af_sigmoid(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2
 	}	
 }
 
+//tanh
+
 void AFFP::af_tanh(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
 	for(int i=0; i<size; ++i){
@@ -231,6 +236,8 @@ void AFFPBP2::af_tanh(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2){
 		d2[i]=c*c*(-2.0*ftanh*(1.0-ftanh*ftanh));
 	}
 }
+
+//isru
 
 void AFFP::af_isru(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
@@ -262,6 +269,8 @@ void AFFPBP2::af_isru(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2){
 	}
 }
 
+//arctan
+
 void AFFP::af_arctan(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
 	for(int i=0; i<size; ++i){
@@ -286,6 +295,8 @@ void AFFPBP2::af_arctan(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2)
 		d2[i]=-2.0*c*zz*frac*frac;
 	}
 }
+
+//relu
 
 void AFFP::af_relu(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
@@ -323,6 +334,8 @@ void AFFPBP2::af_relu(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2){
 		}
 	}
 }
+
+//elu
 
 void AFFP::af_elu(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
@@ -362,6 +375,8 @@ void AFFPBP2::af_elu(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2){
 		}
 	}
 }
+
+//tanhre
 
 void AFFP::af_tanhre(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
@@ -403,6 +418,8 @@ void AFFPBP2::af_tanhre(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2)
 	}
 }
 
+//sqre
+
 void AFFP::af_sqre(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
 	for(int i=0; i<size; ++i){
@@ -443,7 +460,7 @@ void AFFPBP2::af_sqre(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2){
 	}
 }
 
-//gated-switch
+//swish
 
 void AFFP::af_swish(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
@@ -494,6 +511,8 @@ void AFFPBP2::af_swish(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2){
 	}
 }
 
+//gelu
+
 void AFFP::af_gelu(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
 	for(int i=0; i<size; ++i){
@@ -519,6 +538,8 @@ void AFFPBP2::af_gelu(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2){
 		d2[i]=0.0;
 	}
 }
+
+//mish
 
 void AFFP::af_mish(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
@@ -582,6 +603,8 @@ void AFFPBP2::af_mish(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2){
 	}
 }
 
+//pflu
+
 void AFFP::af_pflu(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
 	for(int i=0; i<size; ++i){
@@ -611,6 +634,8 @@ void AFFPBP2::af_pflu(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2){
 		d2[i]=-0.5*c*(z2-2.0)*fsqrti3*fsqrti*fsqrti;
 	}
 }
+
+//logish
 
 void AFFP::af_logish(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
@@ -689,6 +714,8 @@ void AFFPBP2::af_softplus(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d
 	}
 }
 
+//sqplus
+
 void AFFP::af_sqplus(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
 	const double ci=1.0/c;
@@ -719,6 +746,8 @@ void AFFPBP2::af_sqplus(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2)
 	}
 }
 
+//atish
+
 void AFFP::af_atish(double c, const VecXd& z, VecXd& a){
 	const int size=z.size();
 	const double ci=1.0/c;
@@ -743,6 +772,42 @@ void AFFPBP2::af_atish(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2){
 		const double zz=1*0.5*PI*z[i];
 		a[i]=z[i]*0.5*(1.0+2.0/PI*atan(zz));
 		d[i]=0.5*(1.0+z[i]/(1.0+zz*zz))+1.0/PI*atan(zz);
+		d2[i]=0.0;
+	}
+}
+
+//ierf
+
+void AFFP::af_ierf(double c, const VecXd& z, VecXd& a){
+	const int size=z.size();
+	for(int i=0; i<size; ++i){
+		const double fexp=std::exp(-z[i]*z[i]);
+		const double zs=math::special::sgn(z[i]);
+		const double t=1.0/(1.0+0.3275911*z[i]*zs);
+		const double ferf=zs*(1.0-t*(0.254829592+t*(-0.284496736+t*(1.421413741+t*(-1.453152027+t*1.061405429))))*fexp);
+		a[i]=0.5*(z[i]*ferf+(fexp+z[i]*RadPI-1.0)/RadPI);
+	}
+}
+void AFFPBP::af_ierf(double c, const VecXd& z, VecXd& a, VecXd& d){
+	const int size=z.size();
+	for(int i=0; i<size; ++i){
+		const double fexp=std::exp(-z[i]*z[i]);
+		const double zs=math::special::sgn(z[i]);
+		const double t=1.0/(1.0+0.3275911*z[i]*zs);
+		const double ferf=zs*(1.0-t*(0.254829592+t*(-0.284496736+t*(1.421413741+t*(-1.453152027+t*1.061405429))))*fexp);
+		a[i]=0.5*(z[i]*ferf+(fexp+z[i]*RadPI-1.0)/RadPI);
+		d[i]=0.5*(ferf+1.0);
+	}
+}
+void AFFPBP2::af_ierf(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2){
+	const int size=z.size();
+	for(int i=0; i<size; ++i){
+		const double fexp=std::exp(-z[i]*z[i]);
+		const double zs=math::special::sgn(z[i]);
+		const double t=1.0/(1.0+0.3275911*z[i]*zs);
+		const double ferf=zs*(1.0-t*(0.254829592+t*(-0.284496736+t*(1.421413741+t*(-1.453152027+t*1.061405429))))*fexp);
+		a[i]=0.5*(z[i]*ferf+(fexp+z[i]*RadPI-1.0)/RadPI);
+		d[i]=0.5*(ferf+1.0);
 		d2[i]=0.0;
 	}
 }
@@ -1268,6 +1333,11 @@ void ANN::resize(const ANNP& annp, int nInp, const std::vector<int>& nNodes){
 				affp_.resize(nlayer_,AFFP::af_atish);
 				affpbp_.resize(nlayer_,AFFPBP::af_atish);
 				affpbp2_.resize(nlayer_,AFFPBP2::af_atish);
+			}break;
+			case Neuron::IERF:{
+				affp_.resize(nlayer_,AFFP::af_ierf);
+				affpbp_.resize(nlayer_,AFFPBP::af_ierf);
+				affpbp2_.resize(nlayer_,AFFPBP2::af_ierf);
 			}break;
 			case Neuron::TEST:{
 				affp_.resize(nlayer_,AFFP::af_test);

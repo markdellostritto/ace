@@ -104,6 +104,7 @@ public:
 		SOFTPLUS,
 		SQPLUS,
 		ATISH,
+		IERF,
 		//test
 		TEST
 	};
@@ -149,6 +150,7 @@ public:
 	static void af_softplus(double c, const VecXd& z, VecXd& a);
 	static void af_sqplus(double c, const VecXd& z, VecXd& a);
 	static void af_atish(double c, const VecXd& z, VecXd& a);
+	static void af_ierf(double c, const VecXd& z, VecXd& a);
 	//test
 	static void af_test(double c, const VecXd& z, VecXd& a);
 };
@@ -180,6 +182,7 @@ public:
 	static void af_softplus(double c, const VecXd& z, VecXd& a, VecXd& d);
 	static void af_sqplus(double c, const VecXd& z, VecXd& a, VecXd& d);
 	static void af_atish(double c, const VecXd& z, VecXd& a, VecXd& d);
+	static void af_ierf(double c, const VecXd& z, VecXd& a, VecXd& d);
 	//test
 	static void af_test(double c, const VecXd& z, VecXd& a, VecXd& d);
 };
@@ -211,6 +214,7 @@ public:
 	static void af_softplus(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2);
 	static void af_sqplus(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2);
 	static void af_atish(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2);
+	static void af_ierf(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2);
 	//test
 	static void af_test(double c, const VecXd& z, VecXd& a, VecXd& d, VecXd& d2);
 };
