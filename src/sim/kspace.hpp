@@ -11,7 +11,7 @@
 #include "mem/serialize.hpp"
 
 #ifndef KSPACE_PRINT_FUNC
-#define KSPACE_PRINT_FUNC 0
+#define KSPACE_PRINT_FUNC 1
 #endif
 
 namespace KSpace{
@@ -19,15 +19,17 @@ namespace KSpace{
 class Base{
 protected:
 	static const std::complex<double> I_;
-	double rc_;//real-space cutoff
-	double prec_;//precision
-	double alpha_;//convergence parameter
-	double errEr_;//error - energy/atom - real space
-	double errEk_;//error - energy/atom - reciprocal space
+	double rc_{0.0};//real-space cutoff
+	double prec_{0.0};//precision
+	double alpha_{0.0};//convergence parameter
+	double errEr_{0.0};//error - energy/atom - real space
+	double errEk_{0.0};//error - energy/atom - reciprocal space
 	Eigen::Vector3i nk_;//number of k-points
 	std::vector<double> ka_;//k-amps
 	std::vector<Eigen::Vector3d> k_;//k-vecs
 public:
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
 	//==== constructors/destructors ====
 	Base(){}
 	virtual ~Base(){}
