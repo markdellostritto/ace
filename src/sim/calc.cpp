@@ -9,8 +9,11 @@
 
 Calculator::Name Calculator::Name::read(const char* str){
 	if(std::strcmp(str,"LJ_CUT")==0) return Calculator::Name::LJ_CUT;
+	else if(std::strcmp(str,"LJ_LONG")==0) return Calculator::Name::LJ_LONG;
 	else if(std::strcmp(str,"COUL_CUT")==0) return Calculator::Name::COUL_CUT;
 	else if(std::strcmp(str,"COUL_LONG")==0) return Calculator::Name::COUL_LONG;
+	else if(std::strcmp(str,"GRHO_CUT")==0) return Calculator::Name::GRHO_CUT;
+	else if(std::strcmp(str,"GRHO_LONG")==0) return Calculator::Name::GRHO_LONG;
 	else if(std::strcmp(str,"DIPOLE_CUT")==0) return Calculator::Name::DIPOLE_CUT;
 	else if(std::strcmp(str,"DIPOLE_LONG")==0) return Calculator::Name::DIPOLE_LONG;
 	else if(std::strcmp(str,"THOLE_CUT")==0) return Calculator::Name::THOLE_CUT;
@@ -23,8 +26,11 @@ Calculator::Name Calculator::Name::read(const char* str){
 const char* Calculator::Name::name(const Calculator::Name& t){
 	switch(t){
 		case Calculator::Name::LJ_CUT: return "LJ_CUT";
+		case Calculator::Name::LJ_LONG: return "LJ_LONG";
 		case Calculator::Name::COUL_CUT: return "COUL_CUT";
 		case Calculator::Name::COUL_LONG: return "COUL_LONG";
+		case Calculator::Name::GRHO_CUT: return "GRHO_CUT";
+		case Calculator::Name::GRHO_LONG: return "GRHO_LONG";
 		case Calculator::Name::DIPOLE_CUT: return "DIPOLE_CUT";
 		case Calculator::Name::DIPOLE_LONG: return "DIPOLE_LONG";
 		case Calculator::Name::THOLE_CUT: return "THOLE_CUT";
@@ -38,8 +44,11 @@ const char* Calculator::Name::name(const Calculator::Name& t){
 std::ostream& operator<<(std::ostream& out, const Calculator::Name& t){
 	switch(t){
 		case Calculator::Name::LJ_CUT: out<<"LJ_CUT"; break;
+		case Calculator::Name::LJ_LONG: out<<"LJ_LONG"; break;
 		case Calculator::Name::COUL_CUT: out<<"COUL_CUT"; break;
 		case Calculator::Name::COUL_LONG: out<<"COUL_LONG"; break;
+		case Calculator::Name::GRHO_CUT: out<<"GRHO_CUT"; break;
+		case Calculator::Name::GRHO_LONG: out<<"GRHO_LONG"; break;
 		case Calculator::Name::DIPOLE_CUT: out<<"DIPOLE_CUT"; break;
 		case Calculator::Name::DIPOLE_LONG: out<<"DIPOLE_LONG"; break;
 		case Calculator::Name::THOLE_CUT: out<<"THOLE_CUT"; break;

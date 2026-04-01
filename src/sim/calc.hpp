@@ -21,8 +21,11 @@ public:
 	public:
 		enum Type{
 			LJ_CUT,
+			LJ_LONG,
 			COUL_CUT,
 			COUL_LONG,
+			GRHO_CUT,
+			GRHO_LONG,
 			DIPOLE_CUT,
 			DIPOLE_LONG,
 			THOLE_CUT,
