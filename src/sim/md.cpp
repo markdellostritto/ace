@@ -195,7 +195,11 @@ int main(int argc, char* argv[]){
 		std::cout<<"setting the types\n";
 		for(int i=0; i<struc.nAtoms(); ++i) struc.type(i)=-1;
 		for(int i=0; i<struc.nAtoms(); ++i){
-			struc.type(i)=types.at(struc.name(i));
+			if(types.find(struc.name(i))==types.end()){
+				throw std::invalid_argument("Could not find type for name in structure.");
+			} else {
+				struc.type(i)=types.at(struc.name(i));
+			}
 		}
 		for(int i=0; i<struc.nAtoms(); ++i){
 			if(struc.type(i)<0){
