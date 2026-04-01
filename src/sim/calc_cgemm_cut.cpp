@@ -22,15 +22,14 @@ CalcCGemmCut::CalcCGemmCut(double rc, double lambdaC, double lambdaS, double rRe
 	mix_=mix;
 	if(lambdaC_<=0) throw std::invalid_argument("CalcCGemmCut::CalcCGemmCut(double,double,double,double,Calculator::Mix): Invalid lambdaC\n");
     if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmCut::CalcCGemmCut(double,double,double,double,Calculator::Mix): Invalid lambdaS\n");
-	if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmCut::CalcCGemmCut(double,double,double,double,Calculator::Mix): Invalid rRep\n");
-	if(mix_==Calculator::Mix::NONE) throw std::invalid_argument("CalcCGemmCut::CalcCGemmCut(double,double,double,double,Calculator::Mix): Invalid rRep\n");
+	if(mix_==Calculator::Mix::NONE) throw std::invalid_argument("CalcCGemmCut::CalcCGemmCut(double,double,double,double,Calculator::Mix): Invalid mixing.\n");
 }
 
 //==== operator ====
 
 std::ostream& operator<<(std::ostream& out, const CalcCGemmCut& calc){
 	return out<<static_cast<const Calculator&>(calc)
-        <<" mean "<<calc.mix_<<" lambdaC "<<calc.lambdaC_<<" lambdaS "<<calc.lambdaS_<<" rRep "<<calc.rRep_;
+        <<" mix "<<calc.mix_<<" lambdaC "<<calc.lambdaC_<<" lambdaS "<<calc.lambdaS_<<" rRep "<<calc.rRep_;
 }
 
 //==== member functions ====
@@ -98,7 +97,7 @@ void CalcCGemmCut::read(Token& token){
 
 void CalcCGemmCut::coeff(Token& token){
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::coeff(Token&):\n";
-	//coeff lj_cut type radius amplitude
+	//coeff type radius amp-overlap amp-repulsive
 	const int type=std::atoi(token.next().c_str())-1;
 	const double radius=std::atof(token.next().c_str());
     const double aOver=std::atof(token.next().c_str());
@@ -116,7 +115,7 @@ void CalcCGemmCut::coeff(Token& token){
 
 double CalcCGemmCut::energy(Structure& struc, const NeighborList& nlist)const{
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::energy(const Structure&,const NeighborList&):\n";
-    const double ke=units::Consts::ke();
+    const double ke=units::Consts::ke()*eps_;
 	const double cRep_=1.0/rRep_;
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -153,7 +152,7 @@ double CalcCGemmCut::energy(Structure& struc, const NeighborList& nlist)const{
 
 double CalcCGemmCut::energy(Structure& struc)const{
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::energy(const Structure&):\n";
-    const double ke=units::Consts::ke();
+    const double ke=units::Consts::ke()*eps_;
 	const double cRep_=1.0/rRep_;
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -188,12 +187,9 @@ double CalcCGemmCut::energy(Structure& struc)const{
 
 double CalcCGemmCut::compute(Structure& struc, const NeighborList& nlist)const{
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::compute(const Structure&,const NeighborList&):\n";
-    const double ke=units::Consts::ke();
+    const double ke=units::Consts::ke()*eps_;
 	const double cRep_=1.0/rRep_;
 	double energy=0;
-	double energyCoul=0;
-	double energyOver=0;
-	double energyRep=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		//store atom data
 		const int ti=struc.type(i);
@@ -231,9 +227,6 @@ double CalcCGemmCut::compute(Structure& struc, const NeighborList& nlist)const{
 				const double fRep=cRep_*eRep;
 				//compute energy
 				energy+=eCoul+eOver+eRep;
-                energyCoul+=eCoul;
-				energyOver+=eOver;
-				energyRep+=eRep;
                 //compute force
 				struc.force(i).noalias()+=(fCoul+fOver+fRep)*drv;
 			}
@@ -241,18 +234,14 @@ double CalcCGemmCut::compute(Structure& struc, const NeighborList& nlist)const{
 	}
 	energy*=0.5;
     struc.pe()+=energy;
-	//std::cout<<" eCoul "<<energyCoul<<" eOver "<<energyOver<<" eRep "<<energyRep<<"\n";
 	return energy;
 }
 
 double CalcCGemmCut::compute(Structure& struc)const{
     if(CALC_CGEMM_CUT_PRINT_FUNC>0) std::cout<<"CalcCGemmCut::compute(const Structure&):\n";
-    const double ke=units::Consts::ke();
+    const double ke=units::Consts::ke()*eps_;
 	const double cRep_=1.0/rRep_;
 	double energy=0;
-	double energyCoul=0;
-	double energyOver=0;
-	double energyRep=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		//store atom data
 		const int ti=struc.type(i);
@@ -289,9 +278,6 @@ double CalcCGemmCut::compute(Structure& struc)const{
 				const double fRep=cRep_*eRep;
 				//compute energy
 				energy+=eCoul+eOver+eRep;
-                energyCoul+=eCoul;
-				energyOver+=eOver;
-				energyRep+=eRep;
                 //compute force
 				const Eigen::Vector3d fij=(fCoul+fOver+fRep)*drv;
 				struc.force(i).noalias()+=fij;
@@ -300,7 +286,6 @@ double CalcCGemmCut::compute(Structure& struc)const{
 		}
 	}
 	struc.pe()+=energy;
-	//std::cout<<" eCoul "<<energyCoul<<" eOver "<<energyOver<<" eRep "<<energyRep<<"\n";
 	return energy;
 }
 
@@ -327,6 +312,7 @@ namespace serialize{
         size+=nt*sizeof(double);//radius_
 		size+=nt*nt*sizeof(double);//aOver_
         size+=nt*nt*sizeof(double);//aRep_
+		size+=sizeof(double);//eps_
 		return size;
 	}
 	
@@ -344,6 +330,7 @@ namespace serialize{
         std::memcpy(arr+pos,&obj.lambdaC(),sizeof(double)); pos+=sizeof(double);//lambdaC_
         std::memcpy(arr+pos,&obj.lambdaS(),sizeof(double)); pos+=sizeof(double);//lambdaS_
 		std::memcpy(arr+pos,&obj.rRep(),sizeof(double)); pos+=sizeof(double);//rRep_
+		std::memcpy(arr+pos,&obj.eps(),sizeof(double)); pos+=sizeof(double);//eps_
 		const int nt=obj.ntypes();
 		if(nt>0){
             std::memcpy(arr+pos,obj.radius().data(),nt*sizeof(double)); pos+=nt*sizeof(double);//radius_
@@ -367,7 +354,8 @@ namespace serialize{
 		std::memcpy(&obj.lambdaC(),arr+pos,sizeof(double)); pos+=sizeof(double);//lambdaC_
         std::memcpy(&obj.lambdaS(),arr+pos,sizeof(double)); pos+=sizeof(double);//lambdaS_
 		std::memcpy(&obj.rRep(),arr+pos,sizeof(double)); pos+=sizeof(double);//rRep_
-		obj.resize(nt);
+		std::memcpy(&obj.eps(),arr+pos,sizeof(double)); pos+=sizeof(double);//eps_
+        obj.resize(nt);
 		if(nt>0){
             std::memcpy(obj.radius().data(),arr+pos,nt*sizeof(double)); pos+=nt*sizeof(double);//radius_
 			std::memcpy(obj.aOver().data(),arr+pos,nt*nt*sizeof(double)); pos+=nt*nt*sizeof(double);//aOver_

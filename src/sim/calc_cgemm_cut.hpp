@@ -15,20 +15,38 @@
 #define CALC_CGEMM_CUT_PRINT_FUNC 0
 #endif
 
+/**
+ * class CalcCGemmCut
+ * Calculation of the energy of a set of particles and shells.
+ * This is calculated as both Coulomb and Overlap interactions between
+ * Gaussian charge distributions, as well as a short-range repulsive
+ * interaction which prevents shells from overlapping in position.
+ * The Coulomb interaction is computed using a finite cutoff.
+ * @param mix_ mixing mode for computing interaction strengths
+ * @param lambdaC_ radial scaling parameter for Coulomb Gaussian width
+ * @param lambdaS_ radial scaling parameter for Overlap Gaussian width
+ * @param radius_ radii for each type used to determine Gaussian widths
+ * @param aOver_ Overlap interaction strength
+ * @param aRep_ amplitude of the close-range repulsive interaction
+ * @param gammaC_ reduced exponent from Gaussian width for Coulomb interaction
+ * @param gammaS_ reduced exponent from Gaussian width for Overalap interaction
+ * @param rgammaC_ radial gammaC_
+ */
 class CalcCGemmCut: public Calculator{
 private:
 	//global parameters
+	double eps_{1.0};//relative permittivity
 	Calculator::Mix mix_{Mix::NONE};
     double lambdaC_{1.0};//radial scaling factor - Coulomb
     double lambdaS_{1.0};//radial scaling factor - Overlap
 	double rRep_{0.0};//repulsive radius
 	//type parameters
-    Eigen::VectorXd radius_;//radius
+    Eigen::VectorXd radius_;//Gaussian radius
     Eigen::MatrixXd aOver_;//overlap amplitude
 	Eigen::MatrixXd aRep_;//repulsive amplitude
     Eigen::MatrixXd gammaC_;//reduced expontent - Coulomb
     Eigen::MatrixXd gammaS_;//reduced expontent - Overlap
-	Eigen::MatrixXd rgammaC_;//reduced expontent - Coulomb
+	Eigen::MatrixXd rgammaC_;//reduced expontent - Coulomb - radical
 public:
     //==== contructors/destructors ====
 	CalcCGemmCut():Calculator(Calculator::Name::CGEMM_CUT){}
@@ -41,6 +59,8 @@ public:
 
 	//==== access ====
 	//global parameters
+	double& eps(){return eps_;}
+    const double& eps()const{return eps_;}
 	Calculator::Mix& mix(){return mix_;}
 	const Calculator::Mix& mix()const{return mix_;}
     double& lambdaC(){return lambdaC_;}
