@@ -106,6 +106,7 @@ An MPI installation is required.
 * make nnptefr - Neural Network Potential Training - Energy + Forces
 * make md - md code
 * make make_basis - make atomic basis functions from template file
+
 **Makefile options - testing:**
 * make test_math_special - test of special functions
 * make test_math_reduce - test of reductions
