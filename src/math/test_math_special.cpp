@@ -380,7 +380,7 @@ void test_logcosh(){
 	err/=N;
 	errp/=N;
 	//write
-	FILE* writer=fopen("test.dat","w");
+	/*FILE* writer=fopen("test.dat","w");
 	if(writer!=NULL){
 		fprintf(writer,"#x exact approx\n");
 		for(int i=0; i<N; ++i){
@@ -391,7 +391,7 @@ void test_logcosh(){
 		}
 		fclose(writer);
 		writer=NULL;
-	}
+	}*/
 	//print
 	char* str=new char[print::len_buf];
 	std::cout<<print::buf(str,print::char_buf)<<"\n";
@@ -446,7 +446,7 @@ void test_softplus(){
 	err/=N;
 	errp/=N;
 	//write
-	FILE* writer=fopen("test_math_special_softplus.dat","w");
+	/*FILE* writer=fopen("test_math_special_softplus.dat","w");
 	if(writer!=NULL){
 		fprintf(writer,"#x exact approx\n");
 		for(int i=0; i<N; ++i){
@@ -457,7 +457,7 @@ void test_softplus(){
 		}
 		fclose(writer);
 		writer=NULL;
-	}
+	}*/
 	//print
 	char* str=new char[print::len_buf];
 	std::cout<<print::buf(str,print::char_buf)<<"\n";
