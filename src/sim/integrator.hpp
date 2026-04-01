@@ -112,16 +112,16 @@ public:
 
 class Fire: public Integrator{
 private:
-	int ndelay_;
-	int npos_,nneg_,nmax_;
-	double alpha0_;
-	double alpha_;
-	double falpha_;
-	double fdtd_,fdti_;
-	double dtmin_,dtmax_;
+	int ndelay_{0};
+	int npos_{0},nneg_{0},nmax_{0};
+	double alpha0_{0.0};
+	double alpha_{0.0};
+	double falpha_{0.0};
+	double fdtd_{0.0},fdti_{0.0};
+	double dtmin_{0.0},dtmax_{0.0};
 public:
 	//==== constructors/destructors ====
-	Fire():Integrator(Name::FIRE),npos_(0){}
+	Fire():Integrator(Name::FIRE){}
 	~Fire(){}
 	
 	//==== operators ====

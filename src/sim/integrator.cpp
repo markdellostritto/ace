@@ -242,7 +242,7 @@ void Fire::compute(Structure& struc, Engine& engine){
 	}
 
 	//**** FIRE STEP ****
-
+	
 	//compute P
 	double P=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -252,6 +252,12 @@ void Fire::compute(Structure& struc, Engine& engine){
 	if(P>0.0){
 		npos_++;
 		nneg_=0;
+		for(int i=0; i<struc.nAtoms(); ++i){
+			const double vnorm=struc.vel(i).norm();
+			struc.vel(i)*=(1.0-alpha_);
+			struc.vel(i).noalias()+=alpha_*struc.force(i)/(1.0e-16+struc.force(i).norm())*vnorm;
+			//struc.vel(i)=(1.0-alpha_)*struc.vel(i)+alpha_*struc.force(i)/(1.0e-16+struc.force(i).norm())*struc.vel(i).norm();
+		}
 		if(npos_>ndelay_){
 			dt_=std::min(dt_*fdti_,dtmax_);
 			alpha_*=falpha_;
@@ -259,55 +265,22 @@ void Fire::compute(Structure& struc, Engine& engine){
 	} else {
 		nneg_++;
 		npos_=0;
-		//if(nneg_>nmax_) break;
+		for(int i=0; i<struc.nAtoms(); ++i){
+			struc.vel(i).setZero();
+		}
 		if(struc.t()>ndelay_){
 			dt_=std::max(dt_*fdtd_,dtmin_);
 			alpha_=alpha0_;
-		}
-		for(int i=0; i<struc.nAtoms(); ++i){
-			struc.posn(i).noalias()-=0.5*dt_*struc.vel(i);
-			struc.vel(i).setZero();
 		}
 	}
 	//std::cout<<"P "<<P<<" dt "<<dt_<<" alpha "<<alpha_<<"\n";
 	
 	//**** MD STEP ****
-
-	//Velocity Verlet
-	/*
-	for(int i=0; i<struc.nAtoms(); ++i){
-		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
-		const double vnorm=struc.vel(i).norm();
-		struc.vel(i)*=(1.0-alpha_);
-		struc.vel(i).noalias()+=alpha_*vnorm*struc.force(i)/(1.0e-16+struc.force(i).norm());
-		struc.posn(i).noalias()+=struc.vel(i)*dt_;
-		struc.force(i).setZero();
-	}
-	struc.pe()=engine.compute(struc);
-	for(int i=0; i<struc.nAtoms(); ++i){
-		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
-	}
-	*/
 	
-	//Euler (explicit)
-	/*
-	for(int i=0; i<struc.nAtoms(); ++i){
-		const double vnorm=struc.vel(i).norm();
-		struc.vel(i)*=(1.0-alpha_);
-		struc.vel(i).noalias()+=alpha_*vnorm*struc.force(i)/(1.0e-16+struc.force(i).norm());
-		struc.posn(i).noalias()+=struc.vel(i)*dt_;
-		struc.vel(i).noalias()+=dt_*struc.force(i)/struc.mass(i);
-		struc.force(i).setZero();
-	}
-	struc.pe()=engine.compute(struc);
-	*/
-
 	//Euler (semi-implicit)
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const double vnorm=struc.vel(i).norm();
 		struc.vel(i).noalias()+=dt_*struc.force(i)/struc.mass(i);
-		struc.vel(i)*=(1.0-alpha_);
-		struc.vel(i).noalias()+=alpha_*vnorm*struc.force(i)/(1.0e-16+struc.force(i).norm());
 		Eigen::Vector3d drv=struc.vel(i)*dt_;
 		const double drn=drv.norm();
 		if(drn>dmax_) drv*=dmax_/drn;
@@ -331,14 +304,14 @@ void Fire::compute(Structure& struc, Engine& engine, const NeighborList& nlist){
 	if(struc.t()==0){
 		for(int i=0; i<struc.nAtoms(); ++i) struc.vel(i).setZero();
 		for(int i=0; i<struc.nAtoms(); ++i) struc.force(i).setZero();
-		struc.pe()=engine.compute(struc);
+		struc.pe()=engine.compute(struc,nlist);
 		alpha_=alpha0_;
 		npos_=0;
 		nneg_=0;
 	}
 
 	//**** FIRE STEP ****
-
+	
 	//compute P
 	double P=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -348,6 +321,12 @@ void Fire::compute(Structure& struc, Engine& engine, const NeighborList& nlist){
 	if(P>0.0){
 		npos_++;
 		nneg_=0;
+		for(int i=0; i<struc.nAtoms(); ++i){
+			const double vnorm=struc.vel(i).norm();
+			struc.vel(i)*=(1.0-alpha_);
+			struc.vel(i).noalias()+=alpha_*struc.force(i)/(1.0e-16+struc.force(i).norm())*vnorm;
+			//struc.vel(i)=(1.0-alpha_)*struc.vel(i)+alpha_*struc.force(i)/struc.force(i).norm()*struc.vel(i).norm();
+		}
 		if(npos_>ndelay_){
 			dt_=std::min(dt_*fdti_,dtmax_);
 			alpha_*=falpha_;
@@ -355,62 +334,29 @@ void Fire::compute(Structure& struc, Engine& engine, const NeighborList& nlist){
 	} else {
 		nneg_++;
 		npos_=0;
-		//if(nneg_>nmax_) break;
+		for(int i=0; i<struc.nAtoms(); ++i){
+			struc.vel(i).setZero();
+		}
 		if(struc.t()>ndelay_){
 			dt_=std::max(dt_*fdtd_,dtmin_);
 			alpha_=alpha0_;
-		}
-		for(int i=0; i<struc.nAtoms(); ++i){
-			struc.posn(i).noalias()-=0.5*dt_*struc.vel(i);
-			struc.vel(i).setZero();
 		}
 	}
 	//std::cout<<"P "<<P<<" dt "<<dt_<<" alpha "<<alpha_<<"\n";
 	
 	//**** MD STEP ****
-
-	//Velocity Verlet
-	/*
-	for(int i=0; i<struc.nAtoms(); ++i){
-		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
-		const double vnorm=struc.vel(i).norm();
-		struc.vel(i)*=(1.0-alpha_);
-		struc.vel(i).noalias()+=alpha_*vnorm*struc.force(i)/(1.0e-16+struc.force(i).norm());
-		struc.posn(i).noalias()+=struc.vel(i)*dt_;
-		struc.force(i).setZero();
-	}
-	struc.pe()=engine.compute(struc);
-	for(int i=0; i<struc.nAtoms(); ++i){
-		struc.vel(i).noalias()+=0.5*dt_*struc.force(i)/struc.mass(i);
-	}
-	*/
 	
-	//Euler (explicit)
-	/*
-	for(int i=0; i<struc.nAtoms(); ++i){
-		const double vnorm=struc.vel(i).norm();
-		struc.vel(i)*=(1.0-alpha_);
-		struc.vel(i).noalias()+=alpha_*vnorm*struc.force(i)/(1.0e-16+struc.force(i).norm());
-		struc.posn(i).noalias()+=struc.vel(i)*dt_;
-		struc.vel(i).noalias()+=dt_*struc.force(i)/struc.mass(i);
-		struc.force(i).setZero();
-	}
-	struc.pe()=engine.compute(struc);
-	*/
-
 	//Euler (semi-implicit)
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const double vnorm=struc.vel(i).norm();
 		struc.vel(i).noalias()+=dt_*struc.force(i)/struc.mass(i);
-		struc.vel(i)*=(1.0-alpha_);
-		struc.vel(i).noalias()+=alpha_*vnorm*struc.force(i)/(1.0e-16+struc.force(i).norm());
 		Eigen::Vector3d drv=struc.vel(i)*dt_;
 		const double drn=drv.norm();
 		if(drn>dmax_) drv*=dmax_/drn;
 		struc.posn(i).noalias()+=drv;
 		struc.force(i).setZero();
 	}
-	struc.pe()=engine.compute(struc);
+	struc.pe()=engine.compute(struc,nlist);
 	
 	//compute KE, T
 	struc.ke()=0;
@@ -444,10 +390,10 @@ std::ostream& Fire::print(std::ostream& out)const{
 }
 
 std::ostream& operator<<(std::ostream& out, const Fire& intg){
-	return out<<intg.name()<<" "<<intg.dt()<<" "<<intg.dtmin()<<" "<<intg.dtmax()
-		<<" "<<intg.fdtd()<<" "<<intg.fdti()
-		<<" "<<intg.alpha()<<" "<<intg.falpha()
-		<<" "<<intg.ndelay()<<" "<<intg.nmax();
+	return out<<intg.name()<<" dt "<<intg.dt()<<" dtmin "<<intg.dtmin()<<" dtmax "<<intg.dtmax()
+		<<" fdtd "<<intg.fdtd()<<" fdti "<<intg.fdti()
+		<<" alpha "<<intg.alpha()<<" falpha "<<intg.falpha()
+		<<" ndelay "<<intg.ndelay()<<" nmax "<<intg.nmax();
 }
 
 //***********************************************************
