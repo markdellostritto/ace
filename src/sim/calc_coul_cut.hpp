@@ -16,6 +16,8 @@
 #endif
 
 class CalcCoulCut: public Calculator{
+private:
+	double eps_{1.0};
 public:
     //==== contructors/destructors ====
 	CalcCoulCut():Calculator(Calculator::Name::COUL_CUT){}
@@ -25,12 +27,12 @@ public:
     //==== operators ====
     friend std::ostream& operator<<(std::ostream& out, const CalcCoulCut& calc);
     
+	//==== access ====
+	double& eps(){return eps_;}
+    const double& eps()const{return eps_;}
+	
     //==== member functions ====
-    void resize(int ntypes);
-	void init();
-	void read(Token& token);
-	void coeff(Token& token);
-	double energy(Structure& struc, const NeighborList& nlist)const;
+    double energy(Structure& struc, const NeighborList& nlist)const;
 	double energy(Structure& struc)const;
 	double compute(Structure& struc, const NeighborList& nlist)const;
 	double compute(Structure& struc)const;

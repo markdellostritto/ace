@@ -1,3 +1,5 @@
+// chem
+#include "chem/units.hpp"
 // sim
 #include "sim/calc_coul_cut.hpp"
 
@@ -9,27 +11,9 @@ std::ostream& operator<<(std::ostream& out, const CalcCoulCut& calc){
 
 //==== member functions ====
 
-void CalcCoulCut::resize(int ntypes){
-    if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::resize(int):\n";
-	if(ntypes<0) throw std::invalid_argument("CalcCoulCut::resize(int): Invalid number of types.");
-	ntypes_=ntypes;
-}
-
-void CalcCoulCut::init(){
-    if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::init():\n";
-}
-
-void CalcCoulCut::read(Token& token){
-    static_cast<Calculator&>(*this).read(token);
-}
-
-void CalcCoulCut::coeff(Token& token){
-    if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::coeff(Token&):\n";
-	//coeff coul_cut type1 type2 
-}
-
 double CalcCoulCut::energy(Structure& struc, const NeighborList& nlist)const{
     if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::energy(const Structure&,const NeighborList&):\n";
+	const double ke=units::Consts::ke()*eps_;
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const double qi=struc.charge(i);
@@ -44,13 +28,14 @@ double CalcCoulCut::energy(Structure& struc, const NeighborList& nlist)const{
 			}
 		}
 	}
-	energy*=0.5;
+	energy*=0.5*ke;
     struc.pe()+=energy;
 	return energy;
 }
 
 double CalcCoulCut::energy(Structure& struc)const{
     if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::energy(const Structure&):\n";
+	const double ke=units::Consts::ke()*eps_;
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const double qi=struc.charge(i);
@@ -63,12 +48,14 @@ double CalcCoulCut::energy(Structure& struc)const{
 			}
 		}
 	}
+	energy*=ke;
 	struc.pe()+=energy;
 	return energy;
 }
 
 double CalcCoulCut::compute(Structure& struc, const NeighborList& nlist)const{
     if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::compute(const Structure&,const NeighborList&):\n";
+	const double ke=units::Consts::ke()*eps_;
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const double qi=struc.charge(i);
@@ -80,17 +67,18 @@ double CalcCoulCut::compute(Structure& struc, const NeighborList& nlist)const{
 			if(dr2<rc2_){
 				const double dri=1.0/sqrt(dr2);
 				energy+=qi*qj*dri;
-				struc.force(i).noalias()+=qi*qj*dri/dr2*drv;
+				struc.force(i).noalias()+=ke*qi*qj*dri/dr2*drv;
 			}
 		}
 	}
-	energy*=0.5;
+	energy*=0.5*ke;
     struc.pe()+=energy;
 	return energy;
 }
 
 double CalcCoulCut::compute(Structure& struc)const{
     if(CALC_COUL_CUT_PRINT_FUNC>0) std::cout<<"CalcCoulCut::compute(const Structure&):\n";
+	const double ke=units::Consts::ke()*eps_;
 	double energy=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const double qi=struc.charge(i);
@@ -101,12 +89,13 @@ double CalcCoulCut::compute(Structure& struc)const{
 			if(dr2<rc2_){
 				const double dri=1.0/sqrt(dr2);
 				energy+=qi*qj*dri;
-				const Eigen::Vector3d fij=qi*qj*dri/dr2*drv;
+				const Eigen::Vector3d fij=ke*qi*qj*dri/dr2*drv;
 				struc.force(i).noalias()+=fij;
 				struc.force(j).noalias()-=fij;
 			}
 		}
 	}
+	energy*=ke;
 	struc.pe()+=energy;
 	return energy;
 }
@@ -127,6 +116,7 @@ namespace serialize{
 		const int nt=obj.ntypes();
 		size+=nbytes(static_cast<const Calculator&>(obj));
 		size+=sizeof(int);//ntypes_
+		size+=sizeof(double);//eps_
 		return size;
 	}
 	
@@ -139,6 +129,7 @@ namespace serialize{
 		int pos=0;
 		pos+=pack(static_cast<const Calculator&>(obj),arr+pos);
 		std::memcpy(arr+pos,&obj.ntypes(),sizeof(int)); pos+=sizeof(int);//ntypes_
+		std::memcpy(arr+pos,&obj.eps(),sizeof(double)); pos+=sizeof(double);//eps_
 		const int nt=obj.ntypes();
 		return pos;
 	}
@@ -153,6 +144,7 @@ namespace serialize{
 		pos+=unpack(static_cast<Calculator&>(obj),arr+pos);
 		if(obj.name()!=Calculator::Name::COUL_CUT) throw std::invalid_argument("serialize::unpack(CalcCoulCut&,const char*): Invalid name.");
 		std::memcpy(&nt,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
+		std::memcpy(&obj.eps(),arr+pos,sizeof(double)); pos+=sizeof(double);//eps_
 		obj.resize(nt);
 		obj.init();
 		return pos;
