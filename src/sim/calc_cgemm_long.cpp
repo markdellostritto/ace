@@ -1,4 +1,4 @@
-// math
+// chem
 #include "chem/units.hpp"
 // math
 #include "math/const.hpp"
@@ -23,7 +23,6 @@ CalcCGemmLong::CalcCGemmLong(double rc, double lambdaC, double lambdaS, double r
 	mix_=mix;
     if(lambdaC_<=0) throw std::invalid_argument("CalcCGemmLong::CalcCGemmLong(double,double,double,double,Calculator::Mix): Invalid lambdaC\n");
     if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmLong::CalcCGemmLong(double,double,double,double,Calculator::Mix): Invalid lambdaS\n");
-	if(lambdaS_<=0) throw std::invalid_argument("CalcCGemmLong::CalcCGemmLong(double,double,double,double,Calculator::Mix): Invalid rRep\n");
 	if(mix_==Calculator::Mix::NONE) throw std::invalid_argument("CalcCGemmLong::CalcCGemmLong(double,double,double,double,Calculator::Mix): Invalid rRep\n");
 }
 
@@ -107,7 +106,7 @@ void CalcCGemmLong::read(Token& token){
 
 void CalcCGemmLong::coeff(Token& token){
     if(CALC_CGEMM_LONG_PRINT_FUNC>0) std::cout<<"CalcCGemmLong::coeff(Token&):\n";
-	//coeff lj_cut type radius amplitude
+	//coeff type radius amp-overlap amp-repulsive
 	const int type=std::atoi(token.next().c_str())-1;
 	const double radius=std::atof(token.next().c_str());
     const double aOver=std::atof(token.next().c_str());
@@ -183,9 +182,6 @@ double CalcCGemmLong::compute(Structure& struc, const NeighborList& nlist)const{
     // r-space
     const double cRep_=1.0/rRep_;
     double energyR=0;
-	//double energyCoul=0;
-	//double energyOver=0;
-	//double energyRep=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const int ti=struc.type(i);
         const double qi=struc.charge(i);
@@ -224,21 +220,14 @@ double CalcCGemmLong::compute(Structure& struc, const NeighborList& nlist)const{
 				const double fRep=cRep_*eRep;
 				//compute energy
 				energyR+=eCoul+eOver+eRep;
-				//energyCoul+=eCoul;
-				//energyOver+=eOver;
-				//energyRep+=eRep;
-                //compute force
+				//compute force
 				struc.force(i).noalias()+=(fCoul+fOver+fRep)*drv;
 			}
 		}
 	}
     energyR*=0.5;
-	//energyCoul*=0.5;
-	//energyOver*=0.5;
-	//energyRep*=0.5;
-    struc.pe()+=energyR;
+	struc.pe()+=energyR;
 	//return total energy
-	//std::cout<<"eKspace "<<energyK<<" eCoul "<<energyCoul<<" eOver "<<energyOver<<" eRep "<<energyRep<<" alpha "<<a<<"\n";
 	return energyR+energyK;
 }
 
