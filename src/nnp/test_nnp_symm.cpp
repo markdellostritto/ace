@@ -25,8 +25,8 @@
 Structure make_NaCl_small(){
 	const double a0=5.6199998856;
 	Atom atom; 
-	atom.name=true; atom.an=true; atom.type=true;
-	atom.charge=false; atom.posn=true; atom.symm=true;
+	atom.name()=true; atom.an()=true; atom.type()=true;
+	atom.charge()=false; atom.posn()=true; atom.symm()=true;
 	Structure struc;
 	const int natoms=2;
 	struc.resize(natoms,atom);
@@ -48,8 +48,8 @@ Structure make_NaCl_small(){
 Structure make_NaCl_large(){
 	const double a0=16.8599987030;
 	Atom atom; 
-	atom.name=true; atom.an=true; atom.type=true;
-	atom.charge=false; atom.posn=true; atom.symm=true;
+	atom.name()=true; atom.an()=true; atom.type()=true;
+	atom.charge()=false; atom.posn()=true; atom.symm()=true;
 	Structure struc;
 	const int natoms=216;
 	struc.resize(natoms,atom);
@@ -438,8 +438,8 @@ void test_symm_super_rand(){
 	const double a0=5.6199998856*2;
 	const int natoms=8;
 	Atom atom; 
-	atom.name=true; atom.an=true; atom.type=true;
-	atom.charge=false; atom.posn=true; atom.symm=true;
+	atom.name()=true; atom.an()=true; atom.type()=true;
+	atom.charge()=false; atom.posn()=true; atom.symm()=true;
 	Structure struc_small;
 	Structure struc_large;
 	struc_small.resize(natoms,atom);

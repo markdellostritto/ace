@@ -12,9 +12,9 @@ Structure& make_random(Structure& struc, const std::vector<NNH::Type>& types){
 	//resize struc
 	const int natoms=20;
 	Atom atom; 
-	atom.name=true; atom.an=true; atom.type=true;
-	atom.charge=false; atom.posn=true; atom.force=true; 
-    atom.symm=true;
+	atom.name()=true; atom.an()=true; atom.type()=true;
+	atom.charge()=false; atom.posn()=true; atom.force()=true; 
+    atom.symm()=true;
 	struc.resize(natoms,atom);
 	
 	//resize the lattice
