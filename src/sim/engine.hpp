@@ -21,9 +21,9 @@
 
 class Engine{
 private:
-	int stride_;
-	int ntypes_;
-	double rcmax_;
+	int stride_;//nearest neighbor stride
+	int ntypes_;//total number of atom types
+	double rcmax_;//maximum cutoff radius
     std::vector<std::shared_ptr<Calculator> > calcs_;//calculators
 	std::vector<std::shared_ptr<Constraint> > constraints_;//constraints
 public:
