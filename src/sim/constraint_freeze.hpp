@@ -21,4 +21,31 @@ public:
     double compute(Structure& struc);
 };
 
+//**********************************************
+// serialization
+//**********************************************
+	
+namespace serialize{
+	
+	//**********************************************
+	// byte measures
+	//**********************************************
+	
+	template <> int nbytes(const ConstraintFreeze& obj);
+	
+	
+	//**********************************************
+	// packing
+	//**********************************************
+	
+	template <> int pack(const ConstraintFreeze& obj, char* arr);
+	
+	//**********************************************
+	// unpacking
+	//**********************************************
+	
+	template <> int unpack(ConstraintFreeze& obj, const char* arr);
+	
+}
+
 #endif
