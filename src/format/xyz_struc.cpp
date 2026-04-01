@@ -87,7 +87,7 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 				if(proptok.next()!="S") throw std::runtime_error(funcame+": invalid name data type.");
 				else if(std::atoi(proptok.next().c_str())!=1) throw std::runtime_error(funcame+": invalid name length.");
 				else ni=ndata++;
-			} else if(tag=="CHARGE"){
+			} else if(tag=="CHARGE" || tag=="CHG" || tag=="Q"){
 				if(proptok.next()!="R") throw std::runtime_error(funcame+": invalid charge data type.");
 				else if(std::atoi(proptok.next().c_str())!=1) throw std::runtime_error(funcame+": invalid charge length.");
 				else qi=ndata++;
@@ -95,7 +95,7 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 				if(proptok.next()!="R") throw std::runtime_error(funcame+": invalid charge data type.");
 				else if(std::atoi(proptok.next().c_str())!=1) throw std::runtime_error(funcame+": invalid charge length.");
 				else mi=ndata++;
-			} else if(tag=="POS" || tag=="POSITION"){
+			} else if(tag=="POS" || tag=="POSN" || tag=="POSITION"){
 				if(proptok.next()!="R") throw std::runtime_error(funcame+": invalid position data type.");
 				else if(std::atoi(proptok.next().c_str())!=3) throw std::runtime_error(funcame+": invalid position length.");
 				else for(int i=0; i<3; ++i) ri[i]=ndata++;
