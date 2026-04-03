@@ -40,11 +40,13 @@
 #include "util/compiler.hpp"
 #include "util/time.hpp"
 // sim
-#include "sim/calc.hpp"
-#include "sim/calc_cgemm_long.hpp"
 #include "sim/engine.hpp"
 #include "sim/integrator.hpp"
 #include "sim/constraint_freeze.hpp"
+#include "sim/calc.hpp"
+#include "sim/calc_cgemm_long.hpp"
+#include "sim/calc_grho_long.hpp"
+#include "sim/calc_ldamp_long.hpp"
 // ml
 #include "ml/pca.hpp"
 // sim
@@ -1672,14 +1674,18 @@ int main(int argc, char* argv[]){
 			bool norm=false;  //compute - energy normalization
 			bool zero=false;  //compute - zero point energy
 			bool pca=false;   //compute - pca
-			bool cgemm=false; //compute - cgemm potential
+			bool cgemm=false; //compute - potential - CGEMM
+			bool coul=false;  //compute - potential - GRho
+			bool vdw=false;  //compute - potential - LDamp
 		} compute;
 	//flags - writing
 		struct Write{
 			bool force=false;  //write - force
 			bool energy=false; //write - energy
 			bool input=false;  //write - inputs
-			bool cgemm=false;  //write - cgemm potential
+			bool cgemm=false;  //write - potential - CGEMM
+			bool coul=false;   //write - potential - GRho
+			bool vdw=false;   //write - potential - LDamp
 		} write;
 	//external potentials
 		int stride=1;
@@ -1688,6 +1694,8 @@ int main(int argc, char* argv[]){
 		Shell shell;
 		CalcCGemmLong calcCGemmLong;
 		std::shared_ptr<Integrator> integrator;
+		CalcGRhoLong calcGRhoLong;
+		CalcLDampLong calcLDampLong;
 	//nn potential - opt
 		int nBatch=-1;
 		std::vector<NNH::Type> types;//unique atomic species
@@ -1890,10 +1898,14 @@ int main(int argc, char* argv[]){
 					//set tag value
 					if(atomtag=="MASS"){
 						types[index].mass()=std::atof(token.next().c_str());
+					} else if(atomtag=="CHARGE" || atomtag=="CHG" || atomtag=="Q"){
+						types[index].charge()=std::atof(token.next().c_str());
 					} else if(atomtag=="ENERGY"){
 						types[index].energy()=std::atof(token.next().c_str());
-					} else if(atomtag=="RADIUS"){
-						types[index].radius()=std::atof(token.next().c_str());
+					} else if(atomtag=="RVDW"){
+						types[index].rvdw()=std::atof(token.next().c_str());
+					} else if(atomtag=="RCOV"){
+						types[index].rcov()=std::atof(token.next().c_str());
 					} else if(atomtag=="AMP"){
 						types[index].amp()=std::atof(token.next().c_str());
 					} else if(atomtag=="BASIS"){
@@ -1919,6 +1931,8 @@ int main(int argc, char* argv[]){
 					else if(wtype=="ENERGY") write.energy=string::boolean(token.next().c_str());
 					else if(wtype=="INPUT") write.input=string::boolean(token.next().c_str());
 					else if(wtype=="CGEMM") write.cgemm=string::boolean(token.next().c_str());
+					else if(wtype=="COUL") write.coul=string::boolean(token.next().c_str());
+					else if(wtype=="VDW") write.vdw=string::boolean(token.next().c_str());
 				}
 				//flags - compute
 				if(tag=="COMPUTE"){
@@ -1928,9 +1942,15 @@ int main(int argc, char* argv[]){
 					else if(ctype=="ZERO") compute.zero=string::boolean(token.next().c_str());
 					else if(ctype=="PCA") compute.pca=string::boolean(token.next().c_str());
 					else if(ctype=="CGEMM") compute.cgemm=string::boolean(token.next().c_str());
+					else if(ctype=="COUL") compute.coul=string::boolean(token.next().c_str());
+					else if(ctype=="VDW") compute.vdw=string::boolean(token.next().c_str());
 				}
 				//potential 
-				if(tag=="CALC_CGEMM"){
+				if(tag=="CALC_COUL"){
+					calcGRhoLong.read(token);
+				} else if(tag=="CALC_VDW"){
+					calcLDampLong.read(token);
+				} else if(tag=="CALC_CGEMM"){
 					calcCGemmLong.read(token);
 				} else if(tag=="SHELL"){
 					while(!token.end()){
@@ -1951,13 +1971,17 @@ int main(int argc, char* argv[]){
 					nsteps=std::atoi(token.next().c_str());
 				} else if(tag=="FTOL"){
 					ftol=std::atof(token.next().c_str());
-				}
+				} 
 				//alias
 				if(tag=="ALIAS"){
 					aliases.push_back(Alias());
 					Alias::read(token,aliases.back());
 				}
 			}
+
+			//======== set atom flags =========
+			if(NNPTEFR_PRINT_STATUS>0) std::cout<<"setting atom flags\n";
+			atom.charge()=compute.coul;
 			
 			//======== read - nnpte =========
 			if(NNPTEFR_PRINT_STATUS>0) std::cout<<"reading neural network training parameters\n";
@@ -2060,6 +2084,36 @@ int main(int argc, char* argv[]){
 				std::cout<<"gammaS\n";
 				std::cout<<calcCGemmLong.gammaS()<<"\n";
 			}
+
+			//======== Coulomb ========
+			if(compute.coul){
+				calcGRhoLong.resize(types.size());
+				for(int i=0; i<types.size(); ++i){
+					calcGRhoLong.radius()[i]=types[i].rcov();
+				}
+				calcGRhoLong.init();
+				std::cout<<print::buf(strbuf)<<"\n";
+				std::cout<<print::title("COULOMB",strbuf)<<"\n";
+				std::cout<<calcGRhoLong<<"\n";
+				std::cout<<print::buf(strbuf)<<"\n";
+				
+			}
+
+			//======== vdW ========
+			if(compute.vdw){
+				calcLDampLong.resize(types.size());
+				for(int i=0; i<types.size(); ++i){
+					calcLDampLong.rvdw()(i,i)=types[i].rvdw();
+					calcLDampLong.c6()(i,i)=types[i].amp();
+				}
+				calcLDampLong.init();
+				std::cout<<print::buf(strbuf)<<"\n";
+				std::cout<<print::title("VDW",strbuf)<<"\n";
+				std::cout<<calcLDampLong<<"\n";
+				std::cout<<"c6 = \n"<<calcLDampLong.c6()<<"\n";
+				std::cout<<"rvdw = \n"<<calcLDampLong.rvdw()<<"\n";
+				std::cout<<print::buf(strbuf)<<"\n";
+			}
 			
 			//======== print parameters ========
 			std::cout<<print::buf(strbuf)<<"\n";
@@ -2087,12 +2141,16 @@ int main(int argc, char* argv[]){
 			std::cout<<"zero  = "<<compute.zero<<"\n";
 			std::cout<<"pca   = "<<compute.pca<<"\n";
 			std::cout<<"cgemm = "<<compute.cgemm<<"\n";
+			std::cout<<"coul  = "<<compute.coul<<"\n";
+			std::cout<<"vdw   = "<<compute.vdw<<"\n";
 			std::cout<<print::buf(strbuf)<<"\n";
 			std::cout<<print::title("WRITE FLAGS",strbuf)<<"\n";
 			std::cout<<"force  = "<<write.force<<"\n";
 			std::cout<<"energy = "<<write.energy<<"\n";
 			std::cout<<"inputs = "<<write.input<<"\n";
 			std::cout<<"cgemm  = "<<write.cgemm<<"\n";
+			std::cout<<"coul   = "<<write.coul<<"\n";
+			std::cout<<"vdw    = "<<write.vdw<<"\n";
 			std::cout<<print::buf(strbuf)<<"\n";
 			std::cout<<print::title("EXTERNAL POTENTIAL",strbuf)<<"\n";
 			if(compute.cgemm){
@@ -2115,6 +2173,8 @@ int main(int argc, char* argv[]){
 					}
 				} else throw std::invalid_argument("No integrator.");
 			}
+			if(compute.coul) std::cout<<"COUL = "<<calcGRhoLong<<"\n";
+			if(compute.vdw)  std::cout<<"VDW  = "<<calcLDampLong<<"\n";
 			std::cout<<print::buf(strbuf)<<"\n";
 			std::cout<<print::title("TYPES",strbuf)<<"\n";
 			for(int i=0; i<types.size(); ++i){
@@ -2140,9 +2200,13 @@ int main(int argc, char* argv[]){
 			if(nadd>0 && perturb==Perturb::NONE) throw std::invalid_argument("Invalid perturbation.");
 			if(nadd>0 && rdist==rng::dist::Name::NONE) throw std::invalid_argument("Invalid radial distribution.");
 			if(nadd>0 && rdelta==0) throw std::invalid_argument("Additional structures must have non-zero rdelta.");
-			if(stride<=0) throw std::invalid_argument("Invalid engine stride.");
-			if(nsteps<=0) throw std::invalid_argument("Invalid number of relaxation steps.");
-			if(ftol<0) throw std::invalid_argument("Invalid force tolerance.");
+			if(compute.pca && ngrid<=1) throw std::invalid_argument("Invalid ngrid.");
+			if(compute.cgemm){
+				if(stride<=0) throw std::invalid_argument("Invalid engine stride.");
+				if(nsteps<=0) throw std::invalid_argument("Invalid number of relaxation steps.");
+				if(ftol<0) throw std::invalid_argument("Invalid force tolerance.");
+				if(compute.coul) throw std::invalid_argument("Can't compute CGEMM and Coul.");
+			}
 		}
 		
 		//======== bcast the parameters ========
@@ -2164,11 +2228,15 @@ int main(int argc, char* argv[]){
 		MPI_Bcast(&compute.zero,1,MPI_C_BOOL,0,WORLD.mpic());
 		MPI_Bcast(&compute.pca,1,MPI_C_BOOL,0,WORLD.mpic());
 		MPI_Bcast(&compute.cgemm,1,MPI_C_BOOL,0,WORLD.mpic());
+		MPI_Bcast(&compute.coul,1,MPI_C_BOOL,0,WORLD.mpic());
+		MPI_Bcast(&compute.vdw,1,MPI_C_BOOL,0,WORLD.mpic());
 		//flags - writing
 		MPI_Bcast(&write.force,1,MPI_C_BOOL,0,WORLD.mpic());
 		MPI_Bcast(&write.energy,1,MPI_C_BOOL,0,WORLD.mpic());
 		MPI_Bcast(&write.input,1,MPI_C_BOOL,0,WORLD.mpic());
 		MPI_Bcast(&write.cgemm,1,MPI_C_BOOL,0,WORLD.mpic());
+		MPI_Bcast(&write.coul,1,MPI_C_BOOL,0,WORLD.mpic());
+		MPI_Bcast(&write.vdw,1,MPI_C_BOOL,0,WORLD.mpic());
 		//external potential
 		if(compute.cgemm){
 			//cgemm
@@ -2210,6 +2278,8 @@ int main(int argc, char* argv[]){
 				break;
 			}
 		}
+		if(compute.coul) thread::bcast(WORLD.mpic(),0,calcGRhoLong);
+		if(compute.vdw) thread::bcast(WORLD.mpic(),0,calcLDampLong);
 		//batch
 		MPI_Bcast(&nBatch,1,MPI_INT,0,WORLD.mpic());
 		//structures - format
@@ -2422,6 +2492,18 @@ int main(int argc, char* argv[]){
 				}
 			}
 		}
+
+		//======== set the charges ========
+		if(atom.charge()){
+			if(WORLD.rank()==0) std::cout<<"setting the charges\n";
+			for(int n=0; n<nData; ++n){
+				for(int i=0; i<strucs_org[n].size(); ++i){
+					for(int j=0; j<strucs_org[n][i].nAtoms(); ++j){
+						strucs_org[n][i].charge(j)=nnpte.nnp().nnh(strucs_org[n][i].type(j)).type().charge();
+					}
+				}
+			}
+		}
 		
 		//************************************************************************************
 		// EXTERNAL POTENTIALS
@@ -2517,7 +2599,7 @@ int main(int argc, char* argv[]){
 						eZero+=units::Consts::ke()*(1.0)*(-1.0)*2.0/RadPI*(eCalc.rgammaC()(tc,ts)-alpha);
 						eZero+=eCalc.aOver()(tc,ts)*(1.0)*(1.0);
 					}
-					eZero+=0.5*units::Consts::ke()*eCalc.coul().vc()*eCalc.coul().q2();//Ewald constant term
+					eZero+=0.5*eCalc.coul().vc()*eCalc.coul().q2s();//Ewald constant term
 					//relax the shells
 					int t=0;
 					double ftot=0;
@@ -2576,6 +2658,62 @@ int main(int argc, char* argv[]){
 				std::cout<<"tmax = "<<tmax_tot<<"\n";
 				std::cout<<"favg = "<<favg_tot<<"\n";
 				std::cout<<"fmax = "<<fmax_tot<<"\n";
+			}
+		}
+
+		//======== compute Coulomb energies ========
+		if(compute.coul){
+			if(WORLD.rank()==0) std::cout<<"computing Coulomb energies\n";
+			for(int n=0; n<nData; ++n){
+				for(int i=0; i<strucs_org[n].size(); i++){
+					//copy structure
+					Structure struc=strucs_org[n][i];
+					//zero structure
+					struc.pe()=0;
+					struc.ecoul()=0;
+					for(int j=0; j<struc.nAtoms(); ++j){
+						struc.force(j).setZero();
+					}
+					//compute the Coulomb energy/force
+					NeighborList nlist(calcGRhoLong.rc(),struc);
+					calcGRhoLong.init(struc);
+					const double ecoul=calcGRhoLong.compute(struc,nlist);
+					//adjust the energies
+					strucs_org[n][i].ecoul()=ecoul;
+					strucs_org[n][i].pe()-=ecoul;
+					//adjust the forces
+					for(int j=0; j<strucs_org[n][i].nAtoms(); ++j){
+						strucs_org[n][i].force(j).noalias()-=struc.force(j);
+					}
+				}
+			}
+		}
+
+		//======== compute vdW energies ========
+		if(compute.vdw){
+			if(WORLD.rank()==0) std::cout<<"computing vdW energies\n";
+			for(int n=0; n<nData; ++n){
+				for(int i=0; i<strucs_org[n].size(); i++){
+					//copy structure
+					Structure struc=strucs_org[n][i];
+					//zero structure
+					struc.pe()=0;
+					struc.evdw()=0;
+					for(int j=0; j<struc.nAtoms(); ++j){
+						struc.force(j).setZero();
+					}
+					//compute the vdW energy/force
+					NeighborList nlist(calcLDampLong.rc(),struc);
+					calcLDampLong.init(struc);
+					const double evdw=calcLDampLong.compute(struc,nlist);
+					//adjust the energies
+					strucs_org[n][i].evdw()=evdw;
+					strucs_org[n][i].pe()-=evdw;
+					//adjust the forces
+					for(int j=0; j<strucs_org[n][i].nAtoms(); ++j){
+						strucs_org[n][i].force(j).noalias()-=struc.force(j);
+					}
+				}
 			}
 		}
 
@@ -3053,6 +3191,108 @@ int main(int argc, char* argv[]){
 			}
 		}
 		
+		//======== compute the final Coulomb energies ========
+		if(write.coul){
+			if(NNPTEFR_PRINT_STATUS>-1 && WORLD.rank()==0) std::cout<<"computing final Coulomb energies\n";
+			for(int n=0; n<nData; ++n){
+				if(dist_struc[n].size()>0){
+					std::vector<double> energy_r(nstrucs[n],std::numeric_limits<double>::max());
+					std::vector<double> energy_r_t(nstrucs[n],std::numeric_limits<double>::max());
+					std::vector<int> natoms(nstrucs[n],0); std::vector<int> natoms_t(nstrucs[n],0);
+					//compute energies
+					clock.start();
+					for(int i=0; i<dist_struc[n].size(); ++i){
+						if(NNPTEFR_PRINT_STATUS>0) std::cout<<"structure-train["<<WORLD.rank()<<"]["<<i<<"]\n";
+						energy_r[dist_struc[n].index(i)]=strucs_org[n][i].ecoul();
+						natoms[dist_struc[n].index(i)]=strucs_org[n][i].nAtoms();
+					}
+					clock.stop();
+					MPI_Reduce(energy_r.data(),energy_r_t.data(),nstrucs[n],MPI_DOUBLE,MPI_MIN,0,WORLD.mpic());
+					MPI_Reduce(natoms.data(),natoms_t.data(),nstrucs[n],MPI_INT,MPI_MAX,0,WORLD.mpic());
+					//normalize
+					if(compute.norm){
+						for(int i=0; i<nstrucs[n]; ++i) energy_r_t[i]/=natoms_t[i];
+					}
+					//write energies
+					if(WORLD.rank()==0){
+						std::string file;
+						switch(n){
+							case 0: file="nnp_ecoul_train.dat"; break;
+							case 1: file="nnp_ecoul_val.dat"; break;
+							case 2: file="nnp_ecoul_test.dat"; break;
+							default: file="ERROR.dat"; break;
+						}
+						FILE* writer=fopen(file.c_str(),"w");
+						if(writer==NULL) std::cout<<"WARNING: Could not open file: \""<<file<<"\"\n";
+						else{
+							std::vector<std::pair<int,double> > energy_r_pair(nstrucs[n]);
+							for(int i=0; i<nstrucs[n]; ++i){
+								energy_r_pair[i].first=indices[n][i];
+								energy_r_pair[i].second=energy_r_t[i];
+							}
+							std::sort(energy_r_pair.begin(),energy_r_pair.end(),compare_pair);
+							fprintf(writer,"#STRUCTURE ENERGY_COUL\n");
+							for(int i=0; i<nstrucs[n]; ++i){
+								fprintf(writer,"%s %f\n",files[n][i].c_str(),energy_r_pair[i].second);
+							}
+							fclose(writer); writer=NULL;
+						}
+					}
+				}
+			}
+		}
+
+		//======== compute the final vdW energies ========
+		if(write.vdw){
+			if(NNPTEFR_PRINT_STATUS>-1 && WORLD.rank()==0) std::cout<<"computing final vdW energies\n";
+			for(int n=0; n<nData; ++n){
+				if(dist_struc[n].size()>0){
+					std::vector<double> energy_r(nstrucs[n],std::numeric_limits<double>::max());
+					std::vector<double> energy_r_t(nstrucs[n],std::numeric_limits<double>::max());
+					std::vector<int> natoms(nstrucs[n],0); std::vector<int> natoms_t(nstrucs[n],0);
+					//compute energies
+					clock.start();
+					for(int i=0; i<dist_struc[n].size(); ++i){
+						if(NNPTEFR_PRINT_STATUS>0) std::cout<<"structure-train["<<WORLD.rank()<<"]["<<i<<"]\n";
+						energy_r[dist_struc[n].index(i)]=strucs_org[n][i].evdw();
+						natoms[dist_struc[n].index(i)]=strucs_org[n][i].nAtoms();
+					}
+					clock.stop();
+					MPI_Reduce(energy_r.data(),energy_r_t.data(),nstrucs[n],MPI_DOUBLE,MPI_MIN,0,WORLD.mpic());
+					MPI_Reduce(natoms.data(),natoms_t.data(),nstrucs[n],MPI_INT,MPI_MAX,0,WORLD.mpic());
+					//normalize
+					if(compute.norm){
+						for(int i=0; i<nstrucs[n]; ++i) energy_r_t[i]/=natoms_t[i];
+					}
+					//write energies
+					if(WORLD.rank()==0){
+						std::string file;
+						switch(n){
+							case 0: file="nnp_evdw_train.dat"; break;
+							case 1: file="nnp_evdw_val.dat"; break;
+							case 2: file="nnp_evdw_test.dat"; break;
+							default: file="ERROR.dat"; break;
+						}
+						FILE* writer=fopen(file.c_str(),"w");
+						if(writer==NULL) std::cout<<"WARNING: Could not open file: \""<<file<<"\"\n";
+						else{
+							std::vector<std::pair<int,double> > energy_r_pair(nstrucs[n]);
+							for(int i=0; i<nstrucs[n]; ++i){
+								energy_r_pair[i].first=indices[n][i];
+								energy_r_pair[i].second=energy_r_t[i];
+							}
+							std::sort(energy_r_pair.begin(),energy_r_pair.end(),compare_pair);
+							fprintf(writer,"#STRUCTURE ENERGY_COUL\n");
+							for(int i=0; i<nstrucs[n]; ++i){
+								fprintf(writer,"%s %f\n",files[n][i].c_str(),energy_r_pair[i].second);
+							}
+							fclose(writer); writer=NULL;
+						}
+					}
+				}
+			}
+		}
+
 		//======== principal component analysis ========
 		if(compute.pca){
 			if(NNPTEFR_PRINT_STATUS>-1 && WORLD.rank()==0) std::cout<<"computing PCA\n";
