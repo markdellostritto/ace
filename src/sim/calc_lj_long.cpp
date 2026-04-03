@@ -88,7 +88,7 @@ double CalcLJLong::energy(Structure& struc, const NeighborList& nlist)const{
 	// k-space
 	//kLondon_.init(struc);
 	const double energyK=kLondon_.energy(struc);
-	const double a=kLondon_.alpha();
+	const double a2=kLondon_.alpha()*kLondon_.alpha();
 	// r-space
 	double energyR=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -100,7 +100,7 @@ double CalcLJLong::energy(Structure& struc, const NeighborList& nlist)const{
 			if(dr2<rc2_){
 				const double du2=s_(ti,tj)*s_(ti,tj)/dr2;
 				const double du6=du2*du2*du2;
-				const double b2=dr2*a*a;
+				const double b2=dr2*a2;
 				energyR+=4.0*e_(ti,tj)*du6*(du6-exp(-b2)*(1.0+b2*(1.0+0.5*b2)));
 			}
 			
@@ -117,7 +117,7 @@ double CalcLJLong::compute(Structure& struc, const NeighborList& nlist)const{
 	// k-space
 	//kLondon_.init(struc);
 	const double energyK=kLondon_.compute(struc);
-	const double a=kLondon_.alpha();
+	const double a2=kLondon_.alpha()*kLondon_.alpha();
 	// r-space
 	double energyR=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
@@ -131,7 +131,7 @@ double CalcLJLong::compute(Structure& struc, const NeighborList& nlist)const{
 				const double dri2=1.0/dr2;
 				const double du2=s_(ti,tj)*s_(ti,tj)*dri2;
 				const double du6=du2*du2*du2;
-				const double b2=dr2*a*a;
+				const double b2=dr2*a2;
 				const double expf=exp(-b2);
 				energyR+=4.0*e_(ti,tj)*du6*(du6-expf*(1.0+b2*(1.0+0.5*b2)));
 				const Eigen::Vector3d fij=24.0*e_(ti,tj)*du6*(2.0*du6-1.0/6.0*expf*(6.0+b2*(6.0+b2*(3.0+b2))))*dri2*drv;
