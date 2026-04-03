@@ -25,13 +25,14 @@ namespace KSpace{
 
 class London: public Base{
 private:
-	double a3_{0.0};
-	double biis_{0.0};
-	double bijs_{0.0};
-	Eigen::MatrixXd b_;
-	Eigen::VectorXd bs_;
-	mutable std::vector<double> c_;
-	mutable std::vector<double> s_;
+	double a3_{0.0};//(Ewald alpha)^3
+	double biis_{0.0};//sum of b(i,i) for all atoms i,i
+	double bijs_{0.0};//sum of b(i,j) for all atoms i,j
+	double ec_{0.0};//constant energy term
+	Eigen::MatrixXd b_;//London c6 coefficients (ntypes,ntypes)
+	Eigen::VectorXd br_;//radial diagonal of b_
+	mutable std::vector<double> c_;//store cos(k*r)
+	mutable std::vector<double> s_;//store sin(k*r)
 public:
 	//==== constructors/destructors ====
 	London(){}

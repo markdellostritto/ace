@@ -52,21 +52,21 @@ void London::init(const Structure& struc){
 	if(rc_<=0) throw std::invalid_argument("KSpace::London::init(const Structure&): invalid rcut.");
 	
 	//==== summations over c6 ====
-	bs_.resize(b_.rows());
+	br_.resize(b_.rows());
 	for(int i=0; i<b_.rows(); ++i){
-		bs_[i]=sqrt(b_(i,i));
+		br_[i]=sqrt(b_(i,i));
 	}
-	/*double bsum=0;
+	biis_=0;
+	bijs_=0;
 	for(int i=0; i<struc.nAtoms(); ++i){
 		const int ti=struc.type(i);
-		bsum+=b_(ti,ti);
+		biis_+=b_(ti,ti);
+		bijs_+=b_(ti,ti);
 		for(int j=i+1; j<struc.nAtoms(); ++j){
 			const int tj=struc.type(j);
-			bsum+=2.0*b_(ti,tj);
+			bijs_+=2.0*b_(ti,tj);
 		}
-	}*/
-	bijs_=b_.sum();
-	biis_=b_.diagonal().sum();
+	}
 	
 	//==== set structural data ====
 	const Eigen::Matrix3d& R=struc.R();
@@ -141,24 +141,28 @@ void London::init(const Structure& struc){
 		std::cout<<"NK    = "<<NK<<"\n";
 	}
 	
+	//constant term
+	ec_=a3_/3.0*(RadPI*RadPI*RadPI/struc.vol()*bijs_-a3_/2.0*biis_);
 }
 
 double London::energy(Structure& struc)const{
 	if(KSPACEL_PRINT_FUNC>0) std::cout<<"KSpace::London::energy(const Structure&)const:\n";
-	double energy=0;
 	const int natoms=struc.nAtoms();
+	//constant term
+	double energy=ec_;
 	//kspace
 	for(int n=0; n<k_.size(); ++n){
 		double sfr=0,sfi=0;
 		for(int i=0; i<natoms; ++i){
+			const int ti=struc.type(i);
 			const double prod=k_[n].dot(struc.posn(i));
-			sfr+=bs_[struc.type(i)]*std::cos(prod);
-			sfi+=bs_[struc.type(i)]*std::sin(prod);
+			sfr+=br_[ti]*std::cos(prod);
+			sfi+=br_[ti]*std::sin(prod);
 		}
 		energy+=ka_[n]*(sfr*sfr+sfi*sfi);
 	}
 	//constant
-	energy+=a3_/3.0*(RadPI*RadPI*RadPI/struc.vol()*bijs_-a3_/2.0*biis_);
+	//energy+=a3_/3.0*(RadPI*RadPI*RadPI/struc.vol()*bijs_-a3_/2.0*biis_);
 	//return total
 	const double pe=-0.5*energy;
 	struc.pe()+=pe;
@@ -167,30 +171,32 @@ double London::energy(Structure& struc)const{
 
 double London::compute(Structure& struc)const{
 	if(KSPACEL_PRINT_FUNC>0) std::cout<<"KSpace::London::compute(const Structure&)const:\n";
-	double energy=0;
 	const int natoms=struc.nAtoms();
+	//constant term
+	double energy=ec_;
+	//kspace
 	c_.resize(natoms);
 	s_.resize(natoms);
-	//kspace
 	for(int n=0; n<k_.size(); ++n){
 		//compute structure factor
 		double sfr=0,sfi=0;
 		for(int i=0; i<natoms; ++i){
+			const int ti=struc.type(i);
 			const double prod=k_[n].dot(struc.posn(i));
 			c_[i]=std::cos(prod);
 			s_[i]=std::sin(prod);
-			sfr+=bs_[struc.type(i)]*c_[i];
-			sfi+=bs_[struc.type(i)]*s_[i];
+			sfr+=br_[ti]*c_[i];
+			sfi+=br_[ti]*s_[i];
 		}
 		//add to energy
 		energy+=ka_[n]*(sfr*sfr+sfi*sfi);
 		//add to force
 		for(int i=0; i<natoms; ++i){
-			struc.force(i).noalias()-=bs_[struc.type(i)]*ka_[n]*k_[n]*(sfr*s_[i]-sfi*c_[i]);
+			struc.force(i).noalias()-=br_[struc.type(i)]*ka_[n]*k_[n]*(sfr*s_[i]-sfi*c_[i]);
 		}
 	}
 	//constant
-	energy+=a3_/3.0*(RadPI*RadPI*RadPI/struc.vol()*bijs_-a3_/2.0*biis_);
+	//energy+=a3_/3.0*(RadPI*RadPI*RadPI/struc.vol()*bijs_-a3_/2.0*biis_);
 	//return total
 	return -0.5*energy;
 }
