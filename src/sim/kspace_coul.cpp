@@ -31,29 +31,34 @@ void Coul::init(const Structure& struc){
 	if(KSPACEC_PRINT_FUNC>0) std::cout<<"KSpace::Coul::init(const Structure&):\n";
 	if(prec_<=0) throw std::invalid_argument("KSpace::Coul::init(const Structure&): invalid precision.");
 	if(rc_<=0) throw std::invalid_argument("KSpace::Coul::init(const Structure&): invalid rcut.");
-	
+	const double ke=units::Consts::ke()*eps_;
+
 	//set structural data
 	const int& N=struc.nAtoms();
 	const Eigen::Matrix3d& R=struc.R();
 	const Eigen::Matrix3d& K=struc.K();
 	const Eigen::Vector3d L=(Eigen::Vector3d()<<R.col(0).norm(),R.col(1).norm(),R.col(2).norm()).finished();
-	q2_=0;
-	for(int i=0; i<N; ++i) q2_+=struc.charge(i)*struc.charge(i);
-	if(q2_==0) throw std::invalid_argument("KSpace::Coul::init(const Structure&): zero abs charge.");
+	qs_=0;
+	q2s_=0;
+	for(int i=0; i<N; ++i){
+		qs_+=struc.charge(i);
+		q2s_+=struc.charge(i)*struc.charge(i);
+	}
+	if(q2s_==0) throw std::invalid_argument("KSpace::Coul::init(const Structure&): zero abs charge.");
 	
 	//set constants
-	alpha_=prec_*sqrt(N*rc_*L.prod())/(2.0*q2_);
+	alpha_=prec_*sqrt(N*rc_*L.prod())/(2.0*q2s_);
 	if(alpha_!=alpha_) throw std::invalid_argument("Invalid alpha\n");
 	if(alpha_>=1.0) alpha_=(1.35-0.15*log(prec_))/rc_;
 	else alpha_=sqrt(-log(alpha_))/rc_;
 	const double a2i=1.0/(alpha_*alpha_);
 	if(KSPACEC_PRINT_DATA>0) std::cout<<"alpha_ = "<<alpha_<<"\n";
-	
+
 	//set lattice vectors - reciprocal space
 	nk_.setZero();
 	for(int i=0; i<3; ++i){
 		double err=0;
-		const double pre=2.0*q2_*alpha_/(L[i]*L[i]*RadPI*sqrt(N));
+		const double pre=2.0*q2s_*alpha_/(L[i]*L[i]*RadPI*sqrt(N));
 		const double expf=exp(-PI*PI*a2i);
 		do{
 			++nk_[i];
@@ -61,7 +66,7 @@ void Coul::init(const Structure& struc){
 			err=pre*pow(expf,kv*kv)/sqrt(kv);
 		}while(err>prec_);
 	}
-	nk_*=5;//needed to match LAMMPS
+	nk_*=4;//needed to match LAMMPS
 	if(KSPACEC_PRINT_DATA>0) std::cout<<"nk_ = "<<nk_.transpose()<<"\n";
 	
 	//compute k-vecs and k-amps
@@ -76,21 +81,28 @@ void Coul::init(const Structure& struc){
 			}
 		}
 	}
-	const double kc=PI/struc.vol();
+	const double kc=ke*PI/struc.vol();
 	ka_.resize(NK);
 	for(int i=0; i<NK; ++i){
 		const double k2=0.25*k_[i].squaredNorm();
 		ka_[i]=kc*exp(-k2*a2i)/k2;
 	}
 	
-	vc_=-2.0*alpha_/RadPI;
+	//constant term
+	vc_=-2.0*ke*alpha_/RadPI;
+
+	//net charge term
+	vq_=-1.0*ke*PI/(alpha_*alpha_*struc.vol());
+
+	//constant energy
+	ec_=q2s_*vc_+qs_*qs_*vq_;
 }
 
 double Coul::energy(Structure& struc)const{
 	if(KSPACEC_PRINT_FUNC>0) std::cout<<"KSpace::Coul::energy(const Structure&)const:\n";
-	const double ke=units::Consts::ke()*eps_;
-	double energy=0;
 	const int natoms=struc.nAtoms();
+	//constant term
+	double energy=ec_;
 	//kspace - energy
 	for(int n=0; n<k_.size(); ++n){
 		//compute structure factor
@@ -103,16 +115,8 @@ double Coul::energy(Structure& struc)const{
 		//add to energy
 		energy+=ka_[n]*(sfr*sfr+sfi*sfi);
 	}
-	//constant
-	energy+=q2_*vc_;
-	//net charge
-	double qtot=0;
-	for(int i=0; i<natoms; ++i){
-		qtot+=struc.charge(i);
-	}
-	energy-=qtot*qtot*PI/(alpha_*alpha_*struc.vol());
 	//return total
-	const double pe=ke*0.5*energy;
+	const double pe=0.5*energy;
 	struc.pe()+=pe;
 	return pe;
 }
@@ -120,11 +124,12 @@ double Coul::energy(Structure& struc)const{
 double Coul::compute(Structure& struc)const{
 	if(KSPACEC_PRINT_FUNC>0) std::cout<<"KSpace::Coul::compute(const Structure&)const:\n";
 	const double ke=units::Consts::ke()*eps_;
-	double energy=0;
 	const int natoms=struc.nAtoms();
+	//constant term
+	double energy=ec_;
+	//kspace - energy
 	c_.resize(natoms);
 	s_.resize(natoms);
-	//kspace - energy
 	for(int n=0; n<k_.size(); ++n){
 		//compute structure factor
 		double sfr=0,sfi=0;
@@ -138,30 +143,22 @@ double Coul::compute(Structure& struc)const{
 		//add to energy
 		energy+=ka_[n]*(sfr*sfr+sfi*sfi);
 		//add to force
-		const Eigen::Vector3d kvec=ke*ka_[n]*k_[n];
+		const Eigen::Vector3d kvec=ka_[n]*k_[n];
 		for(int i=0; i<natoms; ++i){
 			struc.force(i).noalias()-=kvec*struc.charge(i)*(c_[i]*sfi-s_[i]*sfr);
 		}
 	}
-	//constant term
-	energy+=q2_*vc_;
-	//net charge
-	double qtot=0;
-	for(int i=0; i<natoms; ++i){
-		qtot+=struc.charge(i);
-	}
-	energy-=qtot*qtot*PI/(alpha_*alpha_*struc.vol());
 	//return total
-	const double pe=ke*0.5*energy;
+	const double pe=0.5*energy;
 	struc.pe()+=pe;
 	return pe;
 }
 
 double Coul::compute_explicit(Structure& struc)const{
 	if(KSPACEC_PRINT_FUNC>0) std::cout<<"KSpace::Coul::compute_explicit(const Structure&)const:\n";
-	const double ke=units::Consts::ke()*eps_;
-	double energy=0;
 	const int natoms=struc.nAtoms();
+	//constant term
+	double energy=ec_;
 	//kspace - energy
 	for(int n=0; n<k_.size(); ++n){
 		//compute structure factor
@@ -174,62 +171,12 @@ double Coul::compute_explicit(Structure& struc)const{
 		//add to force
 		for(int i=0; i<natoms; ++i){
 			std::complex<double> y=I_*exp(I_*k_[n].dot(struc.posn(i)))*std::conj(sf);
-			struc.force(i).noalias()-=0.5*ke*struc.charge(i)*ka_[n]*k_[n]*(y+std::conj(y)).real();
+			struc.force(i).noalias()-=0.5*struc.charge(i)*ka_[n]*k_[n]*(y+std::conj(y)).real();
 		}
 	}
-	//constant term
-	energy+=q2_*vc_;
-	//net charge
-	double qtot=0;
-	for(int i=0; i<natoms; ++i){
-		qtot+=struc.charge(i);
-	}
-	energy-=qtot*qtot*PI/(alpha_*alpha_*struc.vol());
 	//return total
-	struc.pe()+=ke*0.5*energy;
-	return ke*0.5*energy;
-}
-
-double Coul::compute_brute(Structure& struc)const{
-	if(KSPACEC_PRINT_FUNC>0) std::cout<<"KSpace::Coul::compute_brute(const Structure&)const:\n";
-	const double ke=units::Consts::ke()*eps_;
-	double energy=0;
-	const int natoms=struc.nAtoms();
-	//kspace - energy
-	for(int n=0; n<k_.size(); ++n){
-		std::complex<double> sf(0,0);
-		for(int i=0; i<natoms; ++i){
-			sf+=struc.charge(i)*exp(-I_*k_[n].dot(struc.posn(i)));
-		}
-		energy+=ka_[n]*std::norm(sf);
-	}
-	//kspace - force
-	Eigen::Vector3d rij;
-	for(int i=0; i<natoms; ++i){
-		const double qi=struc.charge(i);
-		for(int j=i+1; j<natoms; ++j){
-			const double qj=struc.charge(j);
-			struc.diff(struc.posn(i),struc.posn(j),rij);
-			Eigen::Vector3d ssin=Eigen::Vector3d::Zero();
-			for(int n=0; n<k_.size(); ++n){
-				ssin.noalias()+=ka_[n]*k_[n]*sin(k_[n].dot(rij));
-			}
-			ssin*=ke*qi*qj;
-			struc.force(i).noalias()+=ssin;
-			struc.force(j).noalias()-=ssin;
-		}
-	}
-	//constant
-	energy+=q2_*vc_;
-	//net charge
-	double qtot=0;
-	for(int i=0; i<natoms; ++i){
-		qtot+=struc.charge(i);
-	}
-	energy-=qtot*qtot*PI/(alpha_*alpha_*struc.vol());
-	//return total
-	struc.pe()+=ke*0.5*energy;
-	return ke*0.5*energy;
+	struc.pe()+=0.5*energy;
+	return 0.5*energy;
 }
 
 }
