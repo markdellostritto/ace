@@ -48,10 +48,13 @@ public:
 	class Type{
 	private:
 		std::string name_;
-		double energy_;
-		double mass_;
-		double radius_;
-		double amp_;
+		double energy_;	//zero-point energy
+		double mass_;	//mass
+		double charge_;	//atomic charge
+		double radius_;	//radius - generic
+		double rcov_;	//radius - covalent
+		double rvdw_;	//radius - vdW
+		double amp_;	//amplitude
 	public:
 		//===== constructors/destructors ====
 		Type(){clear();}
@@ -68,8 +71,14 @@ public:
 		const double& energy()const{return energy_;}
 		double& mass(){return mass_;}
 		const double& mass()const{return mass_;}
+		double& charge(){return charge_;}
+		const double& charge()const{return charge_;}
 		double& radius(){return radius_;}
 		const double& radius()const{return radius_;}
+		double& rcov(){return rcov_;}
+		const double& rcov()const{return rcov_;}
+		double& rvdw(){return rvdw_;}
+		const double& rvdw()const{return rvdw_;}
 		double& amp(){return amp_;}
 		const double& amp()const{return amp_;}
 
