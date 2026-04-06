@@ -5,6 +5,8 @@
 // calculators
 #include "sim/calc_lj_cut.hpp"
 #include "sim/calc_lj_long.hpp"
+#include "sim/calc_ldamp_cut.hpp"
+#include "sim/calc_ldamp_long.hpp"
 #include "sim/calc_coul_cut.hpp"
 #include "sim/calc_coul_long.hpp"
 #include "sim/calc_grho_cut.hpp"
@@ -26,6 +28,12 @@ std::shared_ptr<Calculator> make_calc(const Calculator::Name& name, double rc){
         } break;
         case Calculator::Name::LJ_LONG:{
             ptr.reset(new CalcLJLong(rc));
+        } break;
+        case Calculator::Name::LDAMP_CUT:{
+            ptr.reset(new CalcLDampCut(rc));
+        } break;
+        case Calculator::Name::LDAMP_LONG:{
+            ptr.reset(new CalcLDampLong(rc));
         } break;
         case Calculator::Name::COUL_CUT:{
             ptr.reset(new CalcCoulCut(rc));
@@ -72,6 +80,12 @@ std::shared_ptr<Calculator> copy(const std::shared_ptr<Calculator>& ptr){
         } break;
         case Calculator::Name::LJ_LONG:{
             ptrnew=std::make_shared<CalcLJLong>(static_cast<const CalcLJLong&>(*ptr));
+        } break;
+        case Calculator::Name::LDAMP_CUT:{
+            ptrnew=std::make_shared<CalcLDampCut>(static_cast<const CalcLDampCut&>(*ptr));
+        } break;
+        case Calculator::Name::LDAMP_LONG:{
+            ptrnew=std::make_shared<CalcLDampLong>(static_cast<const CalcLDampLong&>(*ptr));
         } break;
         case Calculator::Name::COUL_CUT:{
             ptrnew=std::make_shared<CalcCoulCut>(static_cast<const CalcCoulCut&>(*ptr));
@@ -122,6 +136,14 @@ std::shared_ptr<Calculator>& read_calc(std::shared_ptr<Calculator>& calc, Token&
         case Calculator::Name::LJ_LONG:{
             calc.reset(new CalcLJLong());
             static_cast<CalcLJLong&>(*calc).read(token);
+        }break;
+        case Calculator::Name::LDAMP_CUT:{
+            calc.reset(new CalcLDampCut());
+            static_cast<CalcLDampCut&>(*calc).read(token);
+        }break;
+        case Calculator::Name::LDAMP_LONG:{
+            calc.reset(new CalcLDampLong());
+            static_cast<CalcLDampLong&>(*calc).read(token);
         }break;
         case Calculator::Name::COUL_CUT:{
             calc.reset(new CalcCoulCut());
@@ -186,6 +208,8 @@ std::ostream& operator<<(std::ostream& out, const std::shared_ptr<Calculator>& c
     switch(calc->name()){
         case Calculator::Name::LJ_CUT: out<<static_cast<const CalcLJCut&>(*calc); break;
         case Calculator::Name::LJ_LONG: out<<static_cast<const CalcLJLong&>(*calc); break;
+        case Calculator::Name::LDAMP_CUT: out<<static_cast<const CalcLDampCut&>(*calc); break;
+        case Calculator::Name::LDAMP_LONG: out<<static_cast<const CalcLDampLong&>(*calc); break;
         case Calculator::Name::COUL_CUT: out<<static_cast<const CalcCoulCut&>(*calc); break;
         case Calculator::Name::COUL_LONG: out<<static_cast<const CalcCoulLong&>(*calc); break;
         case Calculator::Name::GRHO_CUT: out<<static_cast<const CalcGRhoCut&>(*calc); break;
@@ -214,6 +238,12 @@ namespace serialize{
             }break;
             case Calculator::Name::LJ_LONG:{
                 size+=nbytes(static_cast<const CalcLJLong&>(*ptr));
+            }break;
+            case Calculator::Name::LDAMP_CUT:{
+                size+=nbytes(static_cast<const CalcLDampCut&>(*ptr));
+            }break;
+            case Calculator::Name::LDAMP_LONG:{
+                size+=nbytes(static_cast<const CalcLDampLong&>(*ptr));
             }break;
             case Calculator::Name::COUL_CUT:{
                 size+=nbytes(static_cast<const CalcCoulCut&>(*ptr));
@@ -260,6 +290,12 @@ namespace serialize{
             }break;
             case Calculator::Name::LJ_LONG:{
                 pos+=pack(static_cast<const CalcLJLong&>(*ptr),arr+pos);
+            }break;
+            case Calculator::Name::LDAMP_CUT:{
+                pos+=pack(static_cast<const CalcLDampCut&>(*ptr),arr+pos);
+            }break;
+            case Calculator::Name::LDAMP_LONG:{
+                pos+=pack(static_cast<const CalcLDampLong&>(*ptr),arr+pos);
             }break;
             case Calculator::Name::COUL_CUT:{
                 pos+=pack(static_cast<const CalcCoulCut&>(*ptr),arr+pos);
@@ -308,6 +344,14 @@ namespace serialize{
             case Calculator::Name::LJ_LONG:{
                 ptr=std::make_shared<CalcLJLong>();
                 pos+=unpack(static_cast<const CalcLJLong&>(*ptr),arr+pos);
+            }break;
+            case Calculator::Name::LDAMP_CUT:{
+                ptr=std::make_shared<CalcLDampCut>();
+                pos+=unpack(static_cast<const CalcLDampCut&>(*ptr),arr+pos);
+            }break;
+            case Calculator::Name::LDAMP_LONG:{
+                ptr=std::make_shared<CalcLDampLong>();
+                pos+=unpack(static_cast<const CalcLDampLong&>(*ptr),arr+pos);
             }break;
             case Calculator::Name::COUL_CUT:{
                 ptr=std::make_shared<CalcCoulCut>();
