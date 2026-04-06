@@ -38,6 +38,7 @@ basis = basis.o basis_radial.o basis_angular.o
 nnp = nnh.o nnp.o cutoff.o 
 calc = calc.o calc_factory.o \
        calc_lj_cut.o calc_lj_long.o \
+       calc_ldamp_cut.o calc_ldamp_long.o \
        calc_coul_cut.o calc_coul_long.o \
        calc_grho_cut.o calc_grho_long.o \
        calc_dipole_cut.o calc_dipole_long.o \
@@ -222,6 +223,10 @@ calc_lj_cut.o: sim/calc_lj_cut.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_lj_cut.cpp
 calc_lj_long.o: sim/calc_lj_long.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_lj_long.cpp
+calc_ldamp_cut.o: sim/calc_ldamp_cut.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_ldamp_cut.cpp
+calc_ldamp_long.o: sim/calc_ldamp_long.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_ldamp_long.cpp
 calc_coul_cut.o: sim/calc_coul_cut.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_coul_cut.cpp
 calc_coul_long.o: sim/calc_coul_long.cpp
