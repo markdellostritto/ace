@@ -84,11 +84,11 @@ int main(int argc, char* argv[]){
 		std::vector<double> rcutl;
 		std::vector<std::string> types;
 	//basis - radial
-		PhiRN phiRN;
+		BasisR::Name rName;
 		int nR=0;
 		std::vector<double> eta;
 	//basis - angular
-		PhiAN phiAN;
+		BasisA::Name aName;
 		int nA=0;
 		std::vector<double> zeta;
 		std::vector<int> lambda;
@@ -160,7 +160,7 @@ int main(int argc, char* argv[]){
 		//radial basis
 		std::cout<<"reading radial basis\n";
 		token.read(string::trim_right(fgets(input,string::M,reader),string::COMMENT),string::WS); token.next();
-		phiRN=PhiRN::read(token.next().c_str());
+		rName=BasisR::Name::read(token.next().c_str());
 		nR=std::atoi(token.next().c_str());
 		for(int i=0; i<nR; ++i){
 			token.read(string::trim_right(fgets(input,string::M,reader),string::COMMENT),string::WS);
@@ -169,7 +169,7 @@ int main(int argc, char* argv[]){
 		//angular basis
 		std::cout<<"reading angular basis\n";
 		token.read(string::trim_right(fgets(input,string::M,reader),string::COMMENT),string::WS); token.next();
-		phiAN=PhiAN::read(token.next().c_str());
+		aName=BasisA::Name::read(token.next().c_str());
 		nA=std::atoi(token.next().c_str());
 		for(int i=0; i<nA; ++i){
 			token.read(string::trim_right(fgets(input,string::M,reader),string::COMMENT),string::WS);
@@ -217,7 +217,7 @@ int main(int argc, char* argv[]){
 				fprintf(writer,"basis_radial %s\n",types[j].c_str());
 				fprintf(writer,"BasisR %s %6.4f %s %i\n",
 					Cutoff::Name::name(cutname),
-					rc,PhiRN::name(phiRN),nR
+					rc,BasisR::Name::name(rName),nR
 				);
 				double rs=0;
 				switch(mix_radial){
@@ -283,7 +283,7 @@ int main(int argc, char* argv[]){
 					fprintf(writer,"basis_angular %s %s\n",types[j].c_str(),types[k].c_str());
 					fprintf(writer,"BasisA %s %6.4f %s %i\n",
 						Cutoff::Name::name(cutname),
-						rc,PhiAN::name(phiAN),nA*nra
+						rc,BasisA::Name::name(aName),nA*nra
 					);
 					for(int l=0; l<nra; ++l){
 						double reta=0;
