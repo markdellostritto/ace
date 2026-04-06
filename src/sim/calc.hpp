@@ -22,6 +22,8 @@ public:
 		enum Type{
 			LJ_CUT,
 			LJ_LONG,
+			LDAMP_CUT,
+			LDAMP_LONG,
 			COUL_CUT,
 			COUL_LONG,
 			GRHO_CUT,
