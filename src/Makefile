@@ -317,6 +317,8 @@ test_nnp_force: $(mem) $(struc) $(fstruc) $(str) $(math) $(chem) $(basis) $(nnp)
 	$(CXX_THREAD) $(CXX_FLAGS) $(INC) -o test_nnp_force.exe nnp/test_nnp_force.cpp $(mem) $(struc) $(fstruc) $(str) $(math) $(chem) $(basis) $(nnp) $(neural) $(opt) $(thread) grid.o
 nnptefr: $(nnp) $(str) $(math) $(mem) $(thread) $(basis) $(struc) $(fstruc) $(chem) $(kspaces) $(opt) $(neural) $(util) $(calc) $(constraint) format.o alias.o pca.o grid.o engine.o integrator.o
 	$(CXX_THREAD) $(CXX_FLAGS) $(INC) -o nnptefr.exe nnp/nnptefr.cpp $(nnp) $(str) $(math) $(mem) $(thread) $(basis) $(struc) $(fstruc) $(chem) $(kspaces) $(opt) $(neural) $(util) $(calc) $(constraint) format.o alias.o pca.o grid.o engine.o integrator.o 
+make_basis: $(str) $(basis) $(math) cutoff.o
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o make_basis.exe nnp/make_basis.cpp $(str) $(basis) $(math) cutoff.o
 
 # ==== SPECTRA ====
 
