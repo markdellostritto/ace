@@ -23,8 +23,8 @@ util = compiler.o time.o
 struc = structure.o cell.o state.o atom.o neighbor.o 
 math = special.o reduce.o random.o eigen.o corr.o
 chem = units.o ptable.o 
-str = string.o print.o token.o
-fstruc = file_struc.o vasp_struc.o xyz_struc.o cube_struc.o qe_struc.o
+str = string.o print.o token.o 
+fstruc = file_struc.o vasp_struc.o xyz_struc.o cube_struc.o qe_struc.o cp2k_struc.o
 ftraj = file_traj.o xyz_traj.o vasp_traj.o lammps_traj.o
 mem = serialize.o map.o
 opt = loss.o stop.o algo.o objective.o decay.o iter.o
@@ -101,6 +101,8 @@ print.o: str/print.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c str/print.cpp
 token.o: str/token.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c str/token.cpp
+parse.o: str/parse.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c str/parse.cpp
 
 # ==== utility ====
 
@@ -157,6 +159,8 @@ cube_struc.o: format/cube_struc.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c format/cube_struc.cpp
 qe_struc.o: format/qe_struc.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c format/qe_struc.cpp
+cp2k_struc.o: format/cp2k_struc.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c format/cp2k_struc.cpp
 
 # ==== format ====
 
@@ -319,6 +323,8 @@ nnptefr: $(nnp) $(str) $(math) $(mem) $(thread) $(basis) $(struc) $(fstruc) $(ch
 	$(CXX_THREAD) $(CXX_FLAGS) $(INC) -o nnptefr.exe nnp/nnptefr.cpp $(nnp) $(str) $(math) $(mem) $(thread) $(basis) $(struc) $(fstruc) $(chem) $(kspaces) $(opt) $(neural) $(util) $(calc) $(constraint) format.o alias.o pca.o grid.o engine.o integrator.o 
 make_basis: $(str) $(basis) $(math) cutoff.o
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o make_basis.exe nnp/make_basis.cpp $(str) $(basis) $(math) cutoff.o
+convert_struc: $(struc) $(fstruc) $(str) $(mem) $(util) $(chem) eigen.o parse.o format.o grid.o
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o convert_struc.exe format/convert_struc.cpp $(struc) $(fstruc) $(str) $(mem) $(util) $(chem) eigen.o parse.o format.o grid.o
 
 # ==== SPECTRA ====
 
