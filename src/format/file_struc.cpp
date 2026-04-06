@@ -8,6 +8,7 @@
 #include "format/vasp_struc.hpp"
 #include "format/xyz_struc.hpp"
 #include "format/qe_struc.hpp"
+#include "format/cp2k_struc.hpp"
 
 Structure& read_struc(const char* file, FILE_FORMAT::type format, const Atom& atom, Structure& struc){
 	switch(format){
@@ -16,6 +17,9 @@ Structure& read_struc(const char* file, FILE_FORMAT::type format, const Atom& at
 		break;
 		case FILE_FORMAT::XYZ:
 			XYZ::read(file,atom,struc);
+		break;
+		case FILE_FORMAT::CP2K:
+			CP2K::read(file,atom,struc);
 		break;
 		case FILE_FORMAT::QE:
 			QE::OUT::read(file,atom,struc);
