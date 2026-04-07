@@ -53,11 +53,15 @@ void read(const char* file, const Atom& atom, Structure& struc){
 		int nspecies=0;
 		std::vector<std::string> species;
 	//flags
+		const char* flag_version="version string";
 		const char* flag_atom="ATOMIC COORDINATES";
-		const char* flag_forces="ATOMIC FORCES in";
+		const char* flag_forces1="ATOMIC FORCES in";
+		const char* flag_forces2="Atomic forces";
 		const char* flag_cell="CELL|";
 		const char* flag_energy="ENERGY|";
 		const char* flag_natoms="Atoms:";
+	//version
+		double version=-1;
 	//misc
 		bool error=false;
 		
@@ -69,15 +73,31 @@ void read(const char* file, const Atom& atom, Structure& struc){
 		
 		//read data
 		while(fgets(input,string::M,reader)!=NULL){
-			if(std::strstr(input,flag_natoms)!=NULL){
+			if(std::strstr(input,flag_version)!=NULL){
+				token.read(input,string::WS);
+				while(!token.end()){
+					std::string str=token.next();
+					if(string::number(str.c_str())){
+						version=std::atof(str.c_str());
+					}
+				}
+				if(version<0.0) throw std::runtime_error("Invalid version.");
+			}else if(std::strstr(input,flag_natoms)!=NULL){
 				natomst=std::atoi(std::strstr(input,flag_natoms)+6);
 				if(natomst==0) throw std::runtime_error("Found zero atoms");
 				struc.resize(natomst,atom);
 			} else if(std::strstr(input,flag_atom)!=NULL){
-				//skip three lines
-				fgets(input,string::M,reader);
-				fgets(input,string::M,reader);
-				fgets(input,string::M,reader);
+				//skip lines
+				if(version<1000.0){
+					//version - version number
+					fgets(input,string::M,reader);
+					fgets(input,string::M,reader);
+					fgets(input,string::M,reader);
+				} else {
+					//version - year
+					fgets(input,string::M,reader);
+					fgets(input,string::M,reader);
+				}
 				for(int i=0; i<natomst; ++i){
 					std::vector<std::string> tokens;
 					token.read(fgets(input,string::M,reader),string::WS);
@@ -94,12 +114,20 @@ void read(const char* file, const Atom& atom, Structure& struc){
 						struc.mass(i)=std::atof(tokens[8].c_str())*s_mass;
 					}
 				}
-			} else if(std::strstr(input,flag_forces)!=NULL){
+			} else if(std::strstr(input,flag_forces1)!=NULL){
 				//skip two lines
 				fgets(input,string::M,reader);
 				fgets(input,string::M,reader);
 				for(int i=0; i<natomst; ++i){
 					token.read(fgets(input,string::M,reader),string::WS).next(3);
+					struc.force(i)[0]=std::atof(token.next().c_str())*s_energy/s_len;
+					struc.force(i)[1]=std::atof(token.next().c_str())*s_energy/s_len;
+					struc.force(i)[2]=std::atof(token.next().c_str())*s_energy/s_len;
+				}
+			} else if(std::strstr(input,flag_forces2)!=NULL){
+				fgets(input,string::M,reader);
+				for(int i=0; i<natomst; ++i){
+					token.read(fgets(input,string::M,reader),string::WS).next(2);
 					struc.force(i)[0]=std::atof(token.next().c_str())*s_energy/s_len;
 					struc.force(i)[1]=std::atof(token.next().c_str())*s_energy/s_len;
 					struc.force(i)[2]=std::atof(token.next().c_str())*s_energy/s_len;
@@ -127,10 +155,9 @@ void read(const char* file, const Atom& atom, Structure& struc){
 				R(2,2)=std::atof(token.next().c_str());
 				static_cast<Cell&>(struc).init(R);
 				//skip further "CELL|" lines
-				fgets(input,string::M,reader);
-				fgets(input,string::M,reader);
-				fgets(input,string::M,reader);
-				fgets(input,string::M,reader);
+				while(fgets(input,string::M,reader)!=NULL){
+					if(std::strstr(input,flag_cell)==NULL) break;
+				}
 			} 
 		}
 	}catch(std::exception& e){
