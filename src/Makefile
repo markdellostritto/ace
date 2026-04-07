@@ -289,6 +289,8 @@ test_math_reduce: reduce.o print.o
 # string
 test_token: $(str)
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o test_token.exe str/test_token.cpp $(str)
+test_string: $(str)
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o test_string.exe str/test_string.cpp $(str)
 # ml
 test_nn_neuron: nn.o string.o serialize.o eigen.o print.o special.o token.o random.o
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o test_nn_neuron.exe ml/test_nn_neuron.cpp nn.o string.o serialize.o eigen.o print.o special.o token.o random.o
