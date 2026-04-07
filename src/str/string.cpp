@@ -2,6 +2,7 @@
 #include <cstring>
 #include <cctype>
 #include <cstdlib>
+#include <regex>
 // c++ libraries
 #include <ostream>
 #include <string>
@@ -184,6 +185,13 @@ bool boolean(const char* str){
 		strcmp("1", str)==0
 	) return true;
 	else return false;
+}
+
+bool number(const char* str){
+    static const std::regex number_regex(
+        R"(^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$)"
+    );
+    return std::regex_match(str, number_regex);
 }
 
 }

@@ -68,6 +68,7 @@ namespace string{
 	
 	bool empty(const char* str);
 	bool boolean(const char* str);
+	bool number(const char* str);
 	
 }	
 
