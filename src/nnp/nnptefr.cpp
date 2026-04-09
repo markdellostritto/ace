@@ -55,6 +55,8 @@
 
 using math::constants::RadPI;
 
+Clock::Unit tUnit=Clock::Unit::NS;
+
 static bool compare_pair(const std::pair<int,double>& p1, const std::pair<int,double>& p2){
 	return p1.first<p2.first;
 }
@@ -1081,7 +1083,7 @@ void NNPTEFR::train(int batchSize, const std::vector<Structure>& struc_train, co
 	}
 	//compute the training time
 	clock.stop();
-	double time_train=clock.duration();
+	double time_train=clock.duration(tUnit);
 	MPI_Allreduce(MPI_IN_PLACE,&time_train,1,MPI_DOUBLE,MPI_SUM,WORLD.mpic());
 	time_train/=WORLD.size();
 	MPI_Barrier(WORLD.mpic());
@@ -1865,6 +1867,8 @@ int main(int argc, char* argv[]){
 					ngrid=std::atoi(token.next().c_str());
 				} else if(tag=="SEED"){
 					seed_global=std::atoi(token.next().c_str());
+				} else if(tag=="TIME_UNIT"){
+					tUnit=Clock::Unit::read(string::to_upper(token.next()).c_str());
 				} 
 				//data and execution mode
 				if(tag=="MODE"){//mode of calculation
@@ -2129,6 +2133,7 @@ int main(int argc, char* argv[]){
 			std::cout<<"rdelta    = "<<rdelta<<"\n";
 			std::cout<<"nadd      = "<<nadd<<"\n";
 			std::cout<<"ngrid     = "<<ngrid<<"\n";
+			std::cout<<"time unit = "<<tUnit<<"\n";
 			std::cout<<print::buf(strbuf)<<"\n";
 			std::cout<<print::title("DATA FILES",strbuf)<<"\n";
 			std::cout<<"data_train = \n"; for(int i=0; i<data[0].size(); ++i) std::cout<<"\t\t"<<data[0][i]<<"\n";
@@ -2639,7 +2644,7 @@ int main(int argc, char* argv[]){
 					}
 				}
 				clock.stop();
-				time_cgemm[n]=clock.duration();
+				time_cgemm[n]=clock.duration(tUnit);
 			}
 			double tavg_tot=0;
 			double tmax_tot=0;
@@ -2856,7 +2861,7 @@ int main(int argc, char* argv[]){
 				}
 			}
 			clock.stop();
-			time_symm[n]=clock.duration();
+			time_symm[n]=clock.duration(tUnit);
 		}
 		for(int n=0; n<nData; ++n){
 			clock.start();
@@ -2869,7 +2874,7 @@ int main(int argc, char* argv[]){
 				}
 			}
 			clock.stop();
-			time_symm[n]=clock.duration();
+			time_symm[n]=clock.duration(tUnit);
 		}
 		MPI_Barrier(WORLD.mpic());
 		
@@ -3008,7 +3013,7 @@ int main(int argc, char* argv[]){
 					natoms[dist_struc[n].index(i)]=strucs_org[n][i].nAtoms();
 				}
 				clock.stop();
-				time_energy[n]=clock.duration();
+				time_energy[n]=clock.duration(tUnit);
 				if(compute.zero){
 					for(int i=0; i<dist_struc[n].size(); ++i){
 						for(int j=0; j<strucs_org[n][i].nAtoms(); ++j){
@@ -3142,7 +3147,7 @@ int main(int argc, char* argv[]){
 						}
 					}
 					clock.stop();
-					time_force[n]=clock.duration();
+					time_force[n]=clock.duration(tUnit);
 					//accumulate statistics
 					std::vector<Reduce<1> > r1fv(WORLD.size());
 					thread::gather(r1_force[n],r1fv,WORLD.mpic());
@@ -3532,7 +3537,7 @@ int main(int argc, char* argv[]){
 		//======== stop the wall clock ========
 		if(WORLD.rank()==0){
 			clock_wall.stop();
-			time_wall=clock_wall.duration();
+			time_wall=clock_wall.duration(tUnit);
 		}
 		
 		//************************************************************************************
@@ -3552,7 +3557,7 @@ int main(int argc, char* argv[]){
 		}
 		if(WORLD.rank()==0){
 			std::cout<<print::buf(strbuf)<<"\n";
-			std::cout<<print::title("TIMING (S)",strbuf)<<"\n";
+			std::cout<<print::title("TIMING",strbuf)<<"\n";
 			if(strucs_org[0].size()>0){
 				std::cout<<"time - symm   - train = "<<time_symm[0]<<"\n";
 				std::cout<<"time - energy - train = "<<time_energy[0]<<"\n";
