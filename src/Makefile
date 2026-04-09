@@ -20,7 +20,7 @@ include Makefile.$(COMP)
 ##################################################################################
 
 util = compiler.o time.o
-struc = structure.o cell.o state.o atom.o neighbor.o 
+struc = structure.o cell.o state.o atom.o neighbor.o clist.o
 math = special.o reduce.o random.o eigen.o corr.o
 chem = units.o ptable.o 
 str = string.o print.o token.o 
@@ -62,6 +62,8 @@ state.o: struc/state.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c struc/state.cpp
 neighbor.o: struc/neighbor.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c struc/neighbor.cpp
+clist.o: struc/clist.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c struc/clist.cpp
 grid.o: struc/grid.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c struc/grid.cpp
 group.o: struc/group.cpp
@@ -83,6 +85,8 @@ eigen.o: math/eigen.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c math/eigen.cpp
 corr.o: math/corr.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c math/corr.cpp
+hist.o: math/hist.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c math/hist.cpp
 
 # ==== chem ====
 
@@ -294,6 +298,15 @@ test_string: $(str)
 # ml
 test_nn_neuron: nn.o string.o serialize.o eigen.o print.o special.o token.o random.o
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o test_nn_neuron.exe ml/test_nn_neuron.cpp nn.o string.o serialize.o eigen.o print.o special.o token.o random.o
+
+# ==== ANALYSIS ====
+
+rdf: $(str) $(math) $(chem) $(struc) $(ftraj) $(mem) hist.o trajectory.o interval.o group.o $(signal) format.o time.o
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o rdf.exe analysis/rdf.cpp $(str) $(math) $(chem) $(struc) $(ftraj) $(mem) hist.o trajectory.o interval.o group.o $(signal) format.o time.o -lfftw3
+adf: $(str) $(math) $(chem) $(struc) $(ftraj) $(mem) hist.o trajectory.o interval.o group.o $(signal) format.o time.o
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o adf.exe analysis/adf.cpp $(str) $(math) $(chem) $(struc) $(ftraj) $(mem) hist.o trajectory.o interval.o group.o $(signal) format.o time.o -lfftw3
+gadf: $(str) $(math) $(chem) $(struc) $(ftraj) $(mem) hist.o trajectory.o interval.o group.o $(signal) format.o time.o
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -o gadf.exe analysis/gadf.cpp $(str) $(math) $(chem) $(struc) $(ftraj) $(mem) hist.o trajectory.o interval.o group.o $(signal) format.o time.o -lfftw3
 
 # ==== MOLECULAR DYNAMICS ====
 
