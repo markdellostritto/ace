@@ -41,33 +41,7 @@ public:
     //==== member functions ====
     void clear();
     void build(const Structure& struc);
-};
-
-//***********************************************************
-// PairList
-//***********************************************************
-
-class PairList{
-private:
-    std::vector<std::vector<int> > indices_;
-    std::vector<std::vector<double> > dr2_;
-    std::vector<std::vector<Eigen::Vector3d> > disp_;
-public:
-    //==== constructors/destructors ====
-    PairList(){}
-    PairList(const Structure& struc, const NeighborList& nlist){compute(struc,nlist);}
-    ~PairList(){}
-
-    //==== access ====
-    const std::vector<int>& indices(int i)const{return indices_[i];}
-    const std::vector<double>& dr2(int i)const{return dr2_[i];}
-    const std::vector<Eigen::Vector3d>& disp(int i)const{return disp_[i];}
-    const int& index(int i, int j)const{return indices_[i][j];}
-    const double& dr2(int i, int j)const{return dr2_[i][j];}
-    const Eigen::Vector3d& disp(int i, int j)const{return disp_[i][j];}
-
-    //==== member functions ====
-    void compute(const Structure& struc, const NeighborList& nlist);
+    void build_clist(const Structure& struc);
 };
 
 #endif
