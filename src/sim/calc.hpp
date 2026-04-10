@@ -24,6 +24,7 @@ public:
 			LJ_LONG,
 			LDAMP_CUT,
 			LDAMP_LONG,
+			PAULI,
 			COUL_CUT,
 			COUL_LONG,
 			GRHO_CUT,
