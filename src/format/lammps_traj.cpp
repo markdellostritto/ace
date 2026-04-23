@@ -74,7 +74,6 @@ void read(const char* file, const Interval& interval, const Atom& atom, Trajecto
 		int natoms=0;
 		DATA_ATOM dataAtom;
 		FORMAT_ATOM formatAtom;
-		int minindex=-1;
 	//==== timing ====
 		clock_t start,stop;
 		double time;
@@ -141,27 +140,29 @@ void read(const char* file, const Interval& interval, const Atom& atom, Trajecto
 			}
 		}
 		
-		//==== find the min index ===
+		//==== create the index map ===
+		std::map<int,int> indexMap;
+		std::vector<int> indices(natoms);
 		while(fgets(input,string::M,reader)!=NULL){
 			if(std::strstr(input,"ITEM: ATOMS")!=NULL){
-				minindex=natoms;
-				for(int i=0; i<1; ++i){
-					token.read(fgets(input,string::M,reader),string::WS).next(formatAtom.index);
-					int index=-1;
-					if(formatAtom.index>=0) index=std::atoi(token.next().c_str())-1;
-					minindex=index;
+				if(formatAtom.index>=0){
+					for(int i=0; i<natoms; ++i){
+						token.read(fgets(input,string::M,reader),string::WS).next(formatAtom.index);
+						const int index=std::atoi(token.next().c_str())-1;
+						indices[i]=index;
+					}
+				} else {
+					for(int i=0; i<natoms; ++i){
+						indices[i]=i;
+					}
 				}
-				for(int i=1; i<natoms; ++i){
-					token.read(fgets(input,string::M,reader),string::WS).next(formatAtom.index);
-					//find index
-					int index=-1;
-					if(formatAtom.index>=0) index=std::atoi(token.next().c_str())-1;
-					if(index<minindex) minindex=index;
-				}
-				break;
 			}
 		}
-		
+		std::sort(indices.begin(),indices.end());
+		for(int i=0; i<natoms; ++i){
+			indexMap[indices[i]]=i;
+		}
+
 		std::rewind(reader);
 		
 		//==== set the timesteps ====
@@ -238,6 +239,7 @@ void read(const char* file, const Interval& interval, const Atom& atom, Trajecto
 					token.read(fgets(input,string::M,reader),string::WS);
 					while(!token.end()) tokens.push_back(token.next());
 					//read in the data
+					dataAtom.index=i;//in case the atom id is not printed
 					if(formatAtom.q>=0) dataAtom.q=std::atof(tokens[formatAtom.q].c_str());
 					if(formatAtom.m>=0) dataAtom.m=std::atof(tokens[formatAtom.m].c_str());
 					if(formatAtom.x>=0) dataAtom.posn[0]=std::atof(tokens[formatAtom.x].c_str());
@@ -255,7 +257,7 @@ void read(const char* file, const Interval& interval, const Atom& atom, Trajecto
 					if(formatAtom.index>=0) dataAtom.index=std::atoi(tokens[formatAtom.index].c_str())-1;
 					if(formatAtom.type>=0) dataAtom.type=std::atoi(tokens[formatAtom.type].c_str())-1;
 					//set the simulation data
-					const int index=dataAtom.index-minindex;
+					const int index=indexMap[dataAtom.index];
 					if(atom.type()) traj.frame(lts).type(index)=dataAtom.type;
 					if(atom.posn()) traj.frame(lts).posn(index)=dataAtom.posn*s_len;
 					if(atom.charge()) traj.frame(lts).charge(index)=dataAtom.q;
