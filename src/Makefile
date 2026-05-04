@@ -43,7 +43,8 @@ calc = calc.o calc_factory.o \
        calc_grho_cut.o calc_grho_long.o \
        calc_dipole_cut.o calc_dipole_long.o \
        calc_thole_cut.o calc_thole_long.o \
-       calc_cgemm_cut.o calc_cgemm_long.o
+       calc_cgemm_cut.o calc_cgemm_long.o \
+       calc_pauli.o
 
 
 ##################################################################################
@@ -255,6 +256,8 @@ calc_cgemm_cut.o: sim/calc_cgemm_cut.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_cgemm_cut.cpp
 calc_cgemm_long.o: sim/calc_cgemm_long.cpp
 	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_cgemm_long.cpp
+calc_pauli.o: sim/calc_pauli.cpp
+	$(CXX_SERIAL) $(CXX_FLAGS) $(INC) -c sim/calc_pauli.cpp
 
 # ==== constraint ====
 
