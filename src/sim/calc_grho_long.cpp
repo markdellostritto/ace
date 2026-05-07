@@ -12,19 +12,10 @@ using math::constants::RadPI;
 using math::constants::ZERO;
 using math::special::fmexp;
 
-//==== contructors/destructors ====
-
-CalcGRhoLong::CalcGRhoLong(double rc, Calculator::Mix mix):Calculator(Calculator::Name::GRHO_LONG,rc){
-    mix_=Calculator::Mix::HARMONIC;
-	mix_=mix;
-    if(mix_==Calculator::Mix::NONE) throw std::invalid_argument("CalcGRhoLong::CalcGRhoLong(double,Calculator::Mix): Invalid mixing.\n");
-}
-
 //==== operator ====
 
 std::ostream& operator<<(std::ostream& out, const CalcGRhoLong& calc){
-	return out<<static_cast<const Calculator&>(calc)<<
-        " mix "<<calc.mix_<<" eps "<<calc.eps_<<" prec "<<calc.prec_;
+	return out<<static_cast<const Calculator&>(calc)<<" eps "<<calc.eps_<<" prec "<<calc.prec_;
 }
 
 //==== member functions ====
@@ -56,12 +47,10 @@ void CalcGRhoLong::init(){
 }
 
 void CalcGRhoLong::read(Token& token){
-    static_cast<Calculator&>(*this).read(token);
+	static_cast<Calculator&>(*this).read(token);
     prec_=std::atof(token.next().c_str());
-    mix_=Calculator::Mix::read(string::to_upper(token.next()).c_str());
     if(prec_<=0) throw std::invalid_argument("CalcGRhoLong::read(Token&): Invalid prec.");
     if(eps_<=0) throw std::invalid_argument("CalcGRhoLong::read(Token&): Invalid eps.");
-    if(mix_==Calculator::Mix::NONE) throw std::invalid_argument("CalcGRhoLong::read(Token&): Invalid mixing type.");
 }
 
 void CalcGRhoLong::coeff(Token& token){
@@ -105,7 +94,9 @@ double CalcGRhoLong::energy(Structure& struc, const NeighborList& nlist)const{
                 	const double ferfg=std::erf(rgamma_(ti,tj)*dr);
                     const double ferfp=std::erf(a*dr);
                     eCoul=pf*(ferfg-ferfp);
-				} else eCoul=ke*qi*qj*2.0/RadPI*(rgamma_(ti,tj)-a);
+				} else {
+					eCoul=ke*qi*qj*2.0/RadPI*(rgamma_(ti,tj)-a);
+				}
                 //compute energy
 				energyR+=eCoul;
 			}
@@ -151,7 +142,9 @@ double CalcGRhoLong::compute(Structure& struc, const NeighborList& nlist)const{
                             +a*fmexp(-a*a*dr2)
                         )
                     );
-				} else eCoul=ke*qi*qj*2.0/RadPI*(rgamma_(ti,tj)-a);
+				} else {
+					eCoul=ke*qi*qj*2.0/RadPI*(rgamma_(ti,tj)-a);
+				}
                 //compute energy
 				energyR+=eCoul;
 				//compute force
@@ -180,8 +173,7 @@ namespace serialize{
 		int size=0;
 		const int nt=obj.ntypes();
 		size+=nbytes(static_cast<const Calculator&>(obj));
-        size+=sizeof(obj.mix());//mix_
-		size+=sizeof(int);//ntypes_
+        size+=sizeof(int);//ntypes_
         size+=sizeof(double);//eps_
         size+=sizeof(double);//prec_
         size+=nt*sizeof(double);//radius_
@@ -196,8 +188,7 @@ namespace serialize{
 		if(CALC_GRHO_LONG_PRINT_FUNC>0) std::cout<<"pack(const CalcGRhoLong&,char*):\n";
 		int pos=0;
 		pos+=pack(static_cast<const Calculator&>(obj),arr+pos);
-        std::memcpy(arr+pos,&obj.mix(),sizeof(obj.mix())); pos+=sizeof(obj.mix());//mix_
-		std::memcpy(arr+pos,&obj.ntypes(),sizeof(int)); pos+=sizeof(int);//ntypes_
+        std::memcpy(arr+pos,&obj.ntypes(),sizeof(int)); pos+=sizeof(int);//ntypes_
         std::memcpy(arr+pos,&obj.eps(),sizeof(double)); pos+=sizeof(double);//eps_
         std::memcpy(arr+pos,&obj.prec(),sizeof(double)); pos+=sizeof(double);//prec_
 		const int nt=obj.ntypes();
@@ -216,8 +207,7 @@ namespace serialize{
 		int pos=0,nt=0;
 		pos+=unpack(static_cast<Calculator&>(obj),arr+pos);
 		if(obj.name()!=Calculator::Name::GRHO_LONG) throw std::invalid_argument("serialize::unpack(CalcGRhoLong&,const char*): Invalid name.");
-        std::memcpy(&obj.mix(),arr+pos,sizeof(obj.mix())); pos+=sizeof(obj.mix());//mix_
-		std::memcpy(&nt,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
+        std::memcpy(&nt,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
 		std::memcpy(&obj.eps(),arr+pos,sizeof(double)); pos+=sizeof(double);//eps_
         std::memcpy(&obj.prec(),arr+pos,sizeof(double)); pos+=sizeof(double);//prec_
 		obj.resize(nt);

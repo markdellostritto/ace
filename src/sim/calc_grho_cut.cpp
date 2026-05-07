@@ -12,17 +12,10 @@ using math::constants::RadPI;
 using math::constants::ZERO;
 using math::special::fmexp;
 
-//==== contructors/destructors ====
-
-CalcGRhoCut::CalcGRhoCut(double rc, Calculator::Mix mix):Calculator(Calculator::Name::GRHO_CUT,rc){
-    mix_=mix;
-	if(mix_==Calculator::Mix::NONE) throw std::invalid_argument("CalcGRhoCut::CalcGRhoCut(double,Calculator::Mix): Invalid mixing.\n");
-}
-
 //==== operator ====
 
 std::ostream& operator<<(std::ostream& out, const CalcGRhoCut& calc){
-	return out<<static_cast<const Calculator&>(calc)<<" mix "<<calc.mix_<<" eps "<<calc.eps_;
+	return out<<static_cast<const Calculator&>(calc)<<" eps "<<calc.eps_;
 }
 
 //==== member functions ====
@@ -49,12 +42,6 @@ void CalcGRhoCut::init(){
             rgamma_(i,j)=sqrt(0.5*gamma_(i,j));
 		}
 	}
-}
-
-void CalcGRhoCut::read(Token& token){
-    static_cast<Calculator&>(*this).read(token);
-    mix_=Calculator::Mix::read(string::to_upper(token.next()).c_str());
-    if(mix_==Calculator::Mix::NONE) throw std::invalid_argument("CalcGRhoCut::read(Token&): Invalid mix type.");
 }
 
 void CalcGRhoCut::coeff(Token& token){
@@ -220,10 +207,9 @@ namespace serialize{
 		int size=0;
 		const int nt=obj.ntypes();
 		size+=nbytes(static_cast<const Calculator&>(obj));
-		size+=sizeof(obj.mix());//mix_
 		size+=sizeof(int);//ntypes_
-        size+=nt*sizeof(double);//radius_
-		size+=sizeof(double);//eps_
+        size+=sizeof(double);//eps_
+		size+=nt*sizeof(double);//radius_
 		return size;
 	}
 	
@@ -236,7 +222,6 @@ namespace serialize{
 		if(CALC_GRHO_CUT_PRINT_FUNC>0) std::cout<<"pack(const CalcGRhoCut&,char*):\n";
 		int pos=0;
 		pos+=pack(static_cast<const Calculator&>(obj),arr+pos);
-		std::memcpy(arr+pos,&obj.mix(),sizeof(obj.mix())); pos+=sizeof(obj.mix());//mix_
 		std::memcpy(arr+pos,&obj.ntypes(),sizeof(int)); pos+=sizeof(int);//ntypes_
         std::memcpy(arr+pos,&obj.eps(),sizeof(double)); pos+=sizeof(double);//eps_
 		const int nt=obj.ntypes();
@@ -255,7 +240,6 @@ namespace serialize{
 		int pos=0,nt=0;
 		pos+=unpack(static_cast<Calculator&>(obj),arr+pos);
 		if(obj.name()!=Calculator::Name::GRHO_CUT) throw std::invalid_argument("serialize::unpack(CalcGRhoCut&,const char*): Invalid name.");
-		std::memcpy(&obj.mix(),arr+pos,sizeof(obj.mix())); pos+=sizeof(obj.mix());//mix_
 		std::memcpy(&nt,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
 		std::memcpy(&obj.eps(),arr+pos,sizeof(double)); pos+=sizeof(double);//eps_
         obj.resize(nt);

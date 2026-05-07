@@ -18,16 +18,9 @@
 
 /**
  * class CalcGRhoLong
- * Calculation of the energy of a set of particles and shells.
- * This is calculated as both Coulomb and Overlap interactions between
- * Gaussian charge distributions, as well as a short-range repulsive
- * interaction which prevents shells from overlapping in position.
- * The Coulomb interaction is computed using Ewald summation to
- * take into account long-range interactions.
  * @param eps_ relative permittivity
  * @param prec_ ewald precision
  * @param coul_ Ewald Coulomb calculator
- * @param mix_ mixing mode for computing interaction strengths
  * @param radius_ radii for each type used to determine Gaussian widths
  * @param gamma_ reduced exponent from Gaussian width for Coulomb interaction
  * @param rgamma_ radial gamma_
@@ -39,8 +32,7 @@ private:
 	KSpace::Coul coul_;//Ewald Coulomb calculator
 	//global parameters
 	double eps_{1.0};//relative permittivity
-	Calculator::Mix mix_{Mix::NONE};
-    //type parameters
+	//type parameters
     Eigen::VectorXd radius_;//radius
     Eigen::MatrixXd gamma_;//reduced expontent
     Eigen::MatrixXd rgamma_;//reduced expontent - radical
@@ -48,8 +40,7 @@ public:
     //==== contructors/destructors ====
 	CalcGRhoLong():Calculator(Calculator::Name::GRHO_LONG){}
     CalcGRhoLong(double rc):Calculator(Calculator::Name::GRHO_LONG,rc){}
-	CalcGRhoLong(double rc, Calculator::Mix mix);
-    ~CalcGRhoLong(){}
+	~CalcGRhoLong(){}
 
     //==== operators ====
     friend std::ostream& operator<<(std::ostream& out, const CalcGRhoLong& calc);
@@ -63,9 +54,7 @@ public:
 	//global parameters
 	double& eps(){return eps_;}
     const double& eps()const{return eps_;}
-	Calculator::Mix& mix(){return mix_;}
-	const Calculator::Mix& mix()const{return mix_;}
-    //type parameters
+	//type parameters
 	Eigen::VectorXd& radius(){return radius_;}
 	const Eigen::VectorXd& radius()const{return radius_;}
 	Eigen::MatrixXd& gammaC(){return gamma_;}

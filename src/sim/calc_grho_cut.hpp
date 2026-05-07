@@ -17,12 +17,6 @@
 
 /**
  * class CalcGRhoCut
- * Calculation of the energy of a set of particles and shells.
- * This is calculated as both Coulomb and Overlap interactions between
- * Gaussian charge distributions, as well as a short-range repulsive
- * interaction which prevents shells from overlapping in position.
- * The Coulomb interaction is computed using a finite cutoff.
- * @param mix_ mixing mode for computing interaction strengths
  * @param radius_ radii for each type used to determine Gaussian widths
  * @param gamma_ reduced exponent from Gaussian width for Coulomb interaction
  * @param rgamma_ radial gamma_
@@ -31,8 +25,7 @@ class CalcGRhoCut: public Calculator{
 private:
 	//global parameters
 	double eps_{1.0};//relative permittivity
-	Calculator::Mix mix_{Mix::NONE};
-    //type parameters
+	//type parameters
     Eigen::VectorXd radius_;//Gaussian radius
     Eigen::MatrixXd gamma_;//reduced expontent 
     Eigen::MatrixXd rgamma_;//reduced expontent - radial
@@ -40,8 +33,7 @@ public:
     //==== contructors/destructors ====
 	CalcGRhoCut():Calculator(Calculator::Name::GRHO_CUT){}
     CalcGRhoCut(double rc):Calculator(Calculator::Name::GRHO_CUT,rc){}
-	CalcGRhoCut(double rc, Calculator::Mix mix);
-    ~CalcGRhoCut(){}
+	~CalcGRhoCut(){}
 
     //==== operators ====
     friend std::ostream& operator<<(std::ostream& out, const CalcGRhoCut& calc);
@@ -50,9 +42,7 @@ public:
 	//global parameters
 	double& eps(){return eps_;}
     const double& eps()const{return eps_;}
-	Calculator::Mix& mix(){return mix_;}
-	const Calculator::Mix& mix()const{return mix_;}
-    //type parameters
+	//type parameters
 	Eigen::VectorXd& radius(){return radius_;}
 	const Eigen::VectorXd& radius()const{return radius_;}
 	Eigen::MatrixXd& gamma(){return gamma_;}
@@ -61,7 +51,6 @@ public:
     //==== member functions ====
     void resize(int ntypes);
 	void init();
-	void read(Token& token);
 	void coeff(Token& token);
 	double energy(Structure& struc, const NeighborList& nlist)const;
 	double energy(Structure& struc)const;
