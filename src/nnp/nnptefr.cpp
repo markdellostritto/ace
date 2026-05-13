@@ -49,7 +49,6 @@
 #include "sim/calc_ldamp_long.hpp"
 // ml
 #include "ml/pca.hpp"
-// sim
 // nnpte
 #include "nnp/nnptefr.hpp"
 
@@ -1846,7 +1845,6 @@ int main(int argc, char* argv[]){
 			//======== read in the parameters ========
 			if(NNPTEFR_PRINT_STATUS>-1) std::cout<<"reading parameters\n";
 			while(fgets(input,string::M,reader)!=NULL){
-				std::cout<<input;
 				token.read(string::trim_right(input,string::COMMENT),string::WS);
 				if(token.end()) continue;//skip empty line
 				const std::string tag=string::to_upper(token.next());
@@ -1904,12 +1902,20 @@ int main(int argc, char* argv[]){
 						types[index].mass()=std::atof(token.next().c_str());
 					} else if(atomtag=="CHARGE" || atomtag=="CHG" || atomtag=="Q"){
 						types[index].charge()=std::atof(token.next().c_str());
+					} else if(atomtag=="Z"){
+						types[index].z()=std::atof(token.next().c_str());
 					} else if(atomtag=="ENERGY"){
 						types[index].energy()=std::atof(token.next().c_str());
 					} else if(atomtag=="RVDW"){
 						types[index].rvdw()=std::atof(token.next().c_str());
 					} else if(atomtag=="RCOV"){
 						types[index].rcov()=std::atof(token.next().c_str());
+					} else if(atomtag=="RADIUS"){
+						types[index].radius()=std::atof(token.next().c_str());
+					} else if(atomtag=="ALPHA"){
+						types[index].alpha()=std::atof(token.next().c_str());
+					} else if(atomtag=="IE"){
+						types[index].ie()=std::atof(token.next().c_str());
 					} else if(atomtag=="AMP"){
 						types[index].amp()=std::atof(token.next().c_str());
 					} else if(atomtag=="BASIS"){
@@ -2108,7 +2114,8 @@ int main(int argc, char* argv[]){
 				calcLDampLong.resize(types.size());
 				for(int i=0; i<types.size(); ++i){
 					calcLDampLong.rvdw()(i,i)=types[i].rvdw();
-					calcLDampLong.c6()(i,i)=types[i].amp();
+					calcLDampLong.alpha()(i)=types[i].alpha();
+					calcLDampLong.ie()(i)=types[i].ie();
 				}
 				calcLDampLong.init();
 				std::cout<<print::buf(strbuf)<<"\n";
@@ -3007,7 +3014,7 @@ int main(int argc, char* argv[]){
 				//compute energies
 				clock.start();
 				for(int i=0; i<dist_struc[n].size(); ++i){
-					if(NNPTEFR_PRINT_STATUS>0) std::cout<<"structure["<<WORLD.rank()<<"]["<<i<<"]\i";
+					if(NNPTEFR_PRINT_STATUS>0) std::cout<<"structure["<<WORLD.rank()<<"]["<<i<<"]\n";
 					energy_r[dist_struc[n].index(i)]=strucs_org[n][i].pe();
 					energy_n[dist_struc[n].index(i)]=nnpte.nnp().compute_energy(strucs_org[n][i]);
 					natoms[dist_struc[n].index(i)]=strucs_org[n][i].nAtoms();
