@@ -1,19 +1,29 @@
+// string
+#include "str/string.hpp"
 // sim
 #include "sim/calc_ldamp_cut.hpp"
 
 //==== operator ====
 
 std::ostream& operator<<(std::ostream& out, const CalcLDampCut& calc){
-	return out<<static_cast<const Calculator&>(calc);
+	return out<<static_cast<const Calculator&>(calc)<<" mix "<<calc.mix_;
 }
 
 //==== member functions ====
+
+void CalcLDampCut::read(Token& token){
+	static_cast<Calculator&>(*this).read(token);
+	//calc ldamp_long 6.0 mix 
+	mix_=Calculator::Mix::read(string::to_upper(token.next()).c_str());
+	if(mix_==Calculator::Mix::NONE) throw std::invalid_argument("CalcLDampCut::read(Token&): invalid mix mode.");
+}
 
 void CalcLDampCut::resize(int ntypes){
     if(CALC_LDAMP_CUT_PRINT_FUNC>0) std::cout<<"CalcLDampCut::resize(int):\n";
 	Calculator::resize(ntypes);
 	if(ntypes_>0){
-		f_=Eigen::MatrixXi::Zero(ntypes_,ntypes_);
+		ie_=Eigen::VectorXd::Zero(ntypes_);
+		alpha_=Eigen::VectorXd::Zero(ntypes_);
 		rvdw_=Eigen::MatrixXd::Zero(ntypes_,ntypes_);
         rvdw6_=Eigen::MatrixXd::Zero(ntypes_,ntypes_);
 		c6_=Eigen::MatrixXd::Zero(ntypes_,ntypes_);
@@ -22,53 +32,55 @@ void CalcLDampCut::resize(int ntypes){
 
 void CalcLDampCut::init(){
     if(CALC_LDAMP_CUT_PRINT_FUNC>0) std::cout<<"CalcLDampCut::init():\n";
+	//compute interaction coeffecients
 	for(int i=0; i<ntypes_; ++i){
-		for(int j=i+1; j<ntypes_; ++j){
-			if(f_(i,j)==0){
-				c6_(i,j)=sqrt(c6_(i,i)*c6_(j,j));
-				c6_(j,i)=c6_(i,j);
-				rvdw_(i,j)=0.5*(rvdw_(i,i)+rvdw_(j,j));
-				rvdw_(j,i)=rvdw_(i,j);
-				f_(i,j)=1; f_(j,i)=1;
+		for(int j=0; j<ntypes_; ++j){
+			c6_(i,j)=alpha_[i]*alpha_[j]*sqrt(ie_[i]*ie_[j]);
+		}
+	}
+	//compute vdW radii
+    for(int i=0; i<ntypes_; ++i){
+		for(int j=0; j<ntypes_; ++j){
+			switch(mix_){
+				case Calculator::Mix::ARITHMETIC:
+					rvdw_(i,j)=0.5*(rvdw_(i,i)+rvdw_(j,j));
+				break;
+				case Calculator::Mix::GEOMETRIC:
+					rvdw_(i,j)=sqrt(rvdw_(i,i)*rvdw_(j,j));
+				break;
+				case Calculator::Mix::HARMONIC:
+					rvdw_(i,j)=2.0*rvdw_(i,i)*rvdw_(j,j)/(rvdw_(i,i)+rvdw_(j,j));
+				break;
+				default:
+					throw std::invalid_argument("CalcLDampLong::init(): Invalid mixing mode.");
+				break;
 			}
 		}
 	}
+    //compute rvdW^6
 	for(int i=0; i<ntypes_; ++i){
-		for(int j=i; j<ntypes_; ++j){
+		for(int j=0; j<ntypes_; ++j){
 			const double rvdw=rvdw_(i,j);
 			const double rvdw3=rvdw*rvdw*rvdw;
 			const double rvdw6=rvdw3*rvdw3;
 			rvdw6_(i,j)=rvdw6;
-			rvdw6_(j,i)=rvdw6;
 		}
 	}
 }
 
 void CalcLDampCut::coeff(Token& token){
     if(CALC_LDAMP_CUT_PRINT_FUNC>0) std::cout<<"CalcLDampCut::coeff(Token&):\n";
-	//coeff type1 type2 c6 rvdw
-	const int t1=std::atof(token.next().c_str())-1;
-	const int t2=std::atof(token.next().c_str())-1;
-	const double c6=std::atof(token.next().c_str());
+	//coeff type rvdw alpha ie
+	const int type=std::atoi(token.next().c_str())-1;
 	const double rvdw=std::atof(token.next().c_str());
-	
-	if(t1>=ntypes_) throw std::invalid_argument("Invalid type.");
-	if(t2>=ntypes_) throw std::invalid_argument("Invalid type.");
-	
-	int t1min=t1,t1max=t1;
-	int t2min=t2,t2max=t2;
-	if(t1<0){t1min=0;t1max=ntypes_-1;}
-	if(t2<0){t2min=0;t2max=ntypes_-1;}
-	for(int i=t1min; i<=t1max; ++i){
-		for(int j=t2min; j<=t2max; ++j){
-			const double rvdw3=rvdw*rvdw*rvdw;
-			const double rvdw6=rvdw3*rvdw3;
-			c6_(i,j)=c6; c6_(j,i)=c6;
-			rvdw_(i,j)=rvdw; rvdw_(j,i)=rvdw;
-			rvdw6_(i,j)=rvdw6; rvdw6_(j,i)=rvdw6;
-			f_(i,j)=1; f_(j,i)=1;
-		}
-	}
+    const double alpha=std::atof(token.next().c_str());
+	const double ie=std::atof(token.next().c_str());
+
+	if(type>=ntypes_) throw std::invalid_argument("Invalid type.");
+
+	rvdw_(type,type)=rvdw;
+	alpha_[type]=alpha;
+	ie_[type]=ie;
 }
 
 double CalcLDampCut::energy(Structure& struc, const NeighborList& nlist)const{
@@ -170,8 +182,10 @@ namespace serialize{
 		int size=0;
 		const int nt=obj.ntypes();
 		size+=nbytes(static_cast<const Calculator&>(obj));
+		size+=sizeof(obj.mix());//mix_
 		size+=sizeof(int);//ntypes_
-		size+=nt*nt*sizeof(int);//f_
+		size+=nt*sizeof(double);//ie_
+		size+=nt*sizeof(double);//alpha_
 		size+=nt*nt*sizeof(double);//rvdw_
 		size+=nt*nt*sizeof(double);//c6_
 		return size;
@@ -186,10 +200,12 @@ namespace serialize{
 		if(CALC_LDAMP_CUT_PRINT_FUNC>0) std::cout<<"pack(const CalcLDampCut&,char*):\n";
 		int pos=0;
 		pos+=pack(static_cast<const Calculator&>(obj),arr+pos);
+		std::memcpy(arr+pos,&obj.mix(),sizeof(obj.mix())); pos+=sizeof(obj.mix());//mix_
 		std::memcpy(arr+pos,&obj.ntypes(),sizeof(int)); pos+=sizeof(int);//ntypes_
 		const int nt=obj.ntypes();
 		if(nt>0){
-			std::memcpy(arr+pos,obj.f().data(),nt*nt*sizeof(int)); pos+=nt*nt*sizeof(int);//f_
+			std::memcpy(arr+pos,obj.ie().data(),nt*sizeof(double)); pos+=nt*sizeof(double);//ie_
+			std::memcpy(arr+pos,obj.alpha().data(),nt*sizeof(double)); pos+=nt*sizeof(double);//alpha_
 			std::memcpy(arr+pos,obj.rvdw().data(),nt*nt*sizeof(double)); pos+=nt*nt*sizeof(double);//s_
 			std::memcpy(arr+pos,obj.c6().data(),nt*nt*sizeof(double)); pos+=nt*nt*sizeof(double);//e_
 		}
@@ -205,10 +221,12 @@ namespace serialize{
 		int pos=0,nt=0;
 		pos+=unpack(static_cast<Calculator&>(obj),arr+pos);
 		if(obj.name()!=Calculator::Name::LDAMP_CUT) throw std::invalid_argument("serialize::unpack(CalcLDampCut&,const char*): Invalid name.");
+		std::memcpy(&obj.mix(),arr+pos,sizeof(obj.mix())); pos+=sizeof(obj.mix());//mix_
 		std::memcpy(&nt,arr+pos,sizeof(int)); pos+=sizeof(int);//ntypes_
 		obj.resize(nt);
 		if(nt>0){
-			std::memcpy(obj.f().data(),arr+pos,nt*nt*sizeof(int)); pos+=nt*nt*sizeof(int);//f_
+			std::memcpy(obj.ie().data(),arr+pos,nt*sizeof(double)); pos+=nt*sizeof(double);//ie_
+			std::memcpy(obj.alpha().data(),arr+pos,nt*sizeof(double)); pos+=nt*sizeof(double);//alpha_
 			std::memcpy(obj.rvdw().data(),arr+pos,nt*nt*sizeof(double)); pos+=nt*nt*sizeof(double);//s_
 			std::memcpy(obj.c6().data(),arr+pos,nt*nt*sizeof(double)); pos+=nt*nt*sizeof(double);//e_
 		}

@@ -17,7 +17,9 @@
 
 class CalcLDampCut: public Calculator{
 private:
-    Eigen::MatrixXi f_;//flag (t/f)
+    Calculator::Mix mix_{Mix::NONE};//mixing mode
+	Eigen::VectorXd ie_;//ionization energy
+	Eigen::VectorXd alpha_;//polarizability
     Eigen::MatrixXd rvdw_;//vdw radius
 	Eigen::MatrixXd rvdw6_;//(vdw radius)^6
 	Eigen::MatrixXd c6_;//london c6 coefficient
@@ -31,8 +33,12 @@ public:
     friend std::ostream& operator<<(std::ostream& out, const CalcLDampCut& calc);
 
 	//==== access ====
-	Eigen::MatrixXi& f(){return f_;}
-	const Eigen::MatrixXi& f()const{return f_;}
+	Calculator::Mix& mix(){return mix_;}
+	const Calculator::Mix& mix()const{return mix_;}
+    Eigen::VectorXd& ie(){return ie_;}
+	const Eigen::VectorXd& ie()const{return ie_;}
+	Eigen::VectorXd& alpha(){return alpha_;}
+	const Eigen::VectorXd& alpha()const{return alpha_;}
 	Eigen::MatrixXd& rvdw(){return rvdw_;}
 	const Eigen::MatrixXd& rvdw()const{return rvdw_;}
 	Eigen::MatrixXd& c6(){return c6_;}
@@ -41,6 +47,7 @@ public:
     //==== member functions ====
     void resize(int ntypes);
 	void init();
+	void read(Token& token);
 	void coeff(Token& token);
 	double energy(Structure& struc, const NeighborList& nlist)const;
 	double energy(Structure& struc)const;
