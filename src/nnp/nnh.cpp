@@ -29,6 +29,9 @@ std::ostream& operator<<(std::ostream& out, const NNH::Type& type){
 	out<<"energy "<<type.energy()<<" ";
 	out<<"mass "<<type.mass()<<" ";
 	out<<"charge "<<type.charge()<<" ";
+	out<<"z "<<type.z()<<" ";
+	out<<"alpha "<<type.alpha()<<" ";
+	out<<"ie "<<type.ie()<<" ";
 	out<<"radius "<<type.radius()<<" ";
 	out<<"rcov "<<type.rcov()<<" ";
 	out<<"rvdw "<<type.rvdw()<<" ";
@@ -43,6 +46,9 @@ void NNH::Type::clear(){
 	energy_=0;
 	mass_=0;
 	charge_=0;
+	z_=0;
+	alpha_=0;
+	ie_=0;
 	radius_=0;
 	rcov_=0;
 	rvdw_=0;
@@ -69,6 +75,12 @@ NNH::Type& NNH::Type::read(Token& token){
 			charge_=std::atof(token.next().c_str());
 		} else if(tag=="RADIUS"){
 			radius_=std::atof(token.next().c_str());
+		} else if(tag=="Z"){
+			z_=std::atof(token.next().c_str());
+		} else if(tag=="ALPHA"){
+			alpha_=std::atof(token.next().c_str());
+		} else if(tag=="IE"){
+			ie_=std::atof(token.next().c_str());
 		} else if(tag=="RCOV"){
 			rcov_=std::atof(token.next().c_str());
 		} else if(tag=="RVDW"){
@@ -86,6 +98,9 @@ void NNH::Type::write(FILE* out)const{
 	fprintf(out,"mass %f ",mass_);
 	fprintf(out,"charge %f ",charge_);
 	fprintf(out,"radius %f ",radius_);
+	fprintf(out,"z %f ",z_);
+	fprintf(out,"alpha %f ",alpha_);
+	fprintf(out,"ie %f ",ie_);
 	fprintf(out,"rcov %f ",rcov_);
 	fprintf(out,"rvdw %f ",rvdw_);
 	fprintf(out,"amp %f ",amp_);
@@ -211,6 +226,7 @@ template <> int nbytes(const NNH::Type& obj){
 	size+=sizeof(double);//energy
 	size+=sizeof(double);//mass
 	size+=sizeof(double);//charge
+	size+=sizeof(double);//z
 	size+=sizeof(double);//radius
 	size+=sizeof(double);//rcov
 	size+=sizeof(double);//rvdw
@@ -249,6 +265,7 @@ template <> int pack(const NNH::Type& obj, char* arr){
 	std::memcpy(arr+pos,&obj.energy(),sizeof(double)); pos+=sizeof(double);
 	std::memcpy(arr+pos,&obj.mass(),sizeof(double)); pos+=sizeof(double);
 	std::memcpy(arr+pos,&obj.charge(),sizeof(double)); pos+=sizeof(double);
+	std::memcpy(arr+pos,&obj.z(),sizeof(double)); pos+=sizeof(double);
 	std::memcpy(arr+pos,&obj.radius(),sizeof(double)); pos+=sizeof(double);
 	std::memcpy(arr+pos,&obj.rcov(),sizeof(double)); pos+=sizeof(double);
 	std::memcpy(arr+pos,&obj.rvdw(),sizeof(double)); pos+=sizeof(double);
@@ -287,6 +304,7 @@ template <> int unpack(NNH::Type& obj, const char* arr){
 	std::memcpy(&obj.energy(),arr+pos,sizeof(double)); pos+=sizeof(double);
 	std::memcpy(&obj.mass(),arr+pos,sizeof(double)); pos+=sizeof(double);
 	std::memcpy(&obj.charge(),arr+pos,sizeof(double)); pos+=sizeof(double);
+	std::memcpy(&obj.z(),arr+pos,sizeof(double)); pos+=sizeof(double);
 	std::memcpy(&obj.radius(),arr+pos,sizeof(double)); pos+=sizeof(double);
 	std::memcpy(&obj.rcov(),arr+pos,sizeof(double)); pos+=sizeof(double);
 	std::memcpy(&obj.rvdw(),arr+pos,sizeof(double)); pos+=sizeof(double);
