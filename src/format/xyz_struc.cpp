@@ -39,8 +39,9 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 	if(XYZ_PRINT_FUNC>0) std::cout<<funcame<<":\n";
 	//==== local function variables ====
 	//file i/o
-		char* input=new char[string::M];
-		char* name=new char[string::M];
+		const int M=1000;
+		char* input=new char[M];
+		char* name=new char[M];
 		Token token;
 	//atom info
 		int nAtoms=0;
@@ -65,20 +66,21 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 		
 	//read natoms
 	if(XYZ_PRINT_STATUS>0) std::cout<<"reading natoms\n";
-	fgets(input,string::M,reader);
+	fgets(input,M,reader);
 	nAtoms=std::atoi(input);
 	if(nAtoms<=0) throw std::runtime_error(funcame+": found zero atoms.");
 	
 	//read header
+	if(XYZ_PRINT_STATUS>0) std::cout<<"reading header\n";
 	int ndata=0;
 	int ni=-1; int qi=-1; int mi=-1;
 	Eigen::Vector3i ri=Eigen::Vector3i::Constant(-1);
 	Eigen::Vector3i fi=Eigen::Vector3i::Constant(-1);
 	Eigen::Vector3i di=Eigen::Vector3i::Constant(-1);
-	fgets(input,string::M,reader);
+	fgets(input,M,reader);
 	string::to_upper(input);
 	if(std::strstr(input,"PROPERTIES")!=NULL){
-		token.read(std::strstr(input,"PROPERTIES")," \r\t\n="); token.next();
+		token.read(std::strstr(input,"PROPERTIES")," \r\t\n=").next();
 		const std::string propstr=token.next();
 		Token proptok=Token(propstr,":");
 		while(!proptok.end()){
@@ -107,7 +109,10 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 				if(proptok.next()!="R") throw std::runtime_error(funcame+": invalid dipole data type.");
 				else if(std::atoi(proptok.next().c_str())!=3) throw std::runtime_error(funcame+": invalid dipole length.");
 				else for(int i=0; i<3; ++i) di[i]=ndata++;
-			} 
+			} else { //unknown tag
+				proptok.next();//read tag
+				ndata+=std::atoi(proptok.next().c_str());//read ndata
+			}
 		}
 	}
 	if(std::strstr(input,"POTENTIAL_ENERGY")!=NULL){
@@ -133,12 +138,12 @@ void read(FILE* reader, const Atom& atom, Structure& struc){
 	if(XYZ_PRINT_STATUS>0) std::cout<<"resizing structure\n";
 	struc.resize(nAtoms,atom);
 	
-	//read iatoms
-	if(XYZ_PRINT_STATUS>0) std::cout<<"reading names and posns\n";
+	//read atom properties
+	if(XYZ_PRINT_STATUS>0) std::cout<<"reading atom properties\n";
 	std::vector<std::string> sarr(ndata);
 	for(int i=0; i<nAtoms; ++i){
 		int c=0;
-		token.read(fgets(input,string::M,reader),string::WS);
+		token.read(fgets(input,M,reader),string::WS);
 		while(!token.end()) sarr[c++]=token.next();
 		if(struc.atom().name() && ni>=0){
 			struc.name(i)=sarr[ni];

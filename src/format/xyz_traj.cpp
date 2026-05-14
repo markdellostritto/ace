@@ -16,12 +16,14 @@
 namespace XYZ{
 
 void read(const char* file, const Interval& interval, const Atom& atom, Trajectory& traj){
+	const std::string funcame=std::string("XYZ::read(const char*,Interval&,const Atom&,Trajectory&)");
 	if(XYZ_PRINT_FUNC>0) std::cout<<"XYZ::read(const char*,Interval&,const Atom&,Trajectory&):\n";
 	//==== local function variables ====
 	//file i/o
 		FILE* reader=NULL;
-		char* input=new char[string::M];
-		char* name=new char[string::M];
+		const int M=1000;
+		char* input=new char[M];
+		char* name=new char[M];
 		Token token;
 	//atom info	
 		int nAtoms=0;
@@ -52,7 +54,7 @@ void read(const char* file, const Interval& interval, const Atom& atom, Trajecto
 	
 	//read natoms
 	if(XYZ_PRINT_STATUS>0) std::cout<<"reading natoms\n";
-	fgets(input,string::M,reader);
+	fgets(input,M,reader);
 	nAtoms=std::atoi(input);
 	if(nAtoms<=0) throw std::runtime_error("Runtime Error: found zero atoms.");
 	if(XYZ_PRINT_DATA>0) std::cout<<"natoms = "<<nAtoms<<"\n";
@@ -61,7 +63,7 @@ void read(const char* file, const Interval& interval, const Atom& atom, Trajecto
 	if(XYZ_PRINT_STATUS>0) std::cout<<"reading timesteps\n";
 	std::rewind(reader);
 	int nlines=0;
-	while(fgets(input,string::M,reader)) ++nlines;
+	while(fgets(input,M,reader)) ++nlines;
 	int ts=nlines/(nAtoms+2);//natoms + natoms-line + comment-line
 	if(XYZ_PRINT_DATA>0) std::cout<<"ts = "<<ts<<"\n";
 	
@@ -80,16 +82,16 @@ void read(const char* file, const Interval& interval, const Atom& atom, Trajecto
 	if(XYZ_PRINT_STATUS>0) std::cout<<"reading simulation\n";
 	std::rewind(reader);
 	for(int t=0; t<ibeg; ++t){
-		fgets(input,string::M,reader);//natoms
+		fgets(input,M,reader);//natoms
 		const int nAtoms_=std::atoi(input);
-		fgets(input,string::M,reader);//comment line
+		fgets(input,M,reader);//comment line
 		for(int n=0; n<nAtoms_; ++n){
-			fgets(input,string::M,reader);
+			fgets(input,M,reader);
 		}
 	}
 	for(int t=0; t<traj.timesteps(); ++t){
 		//read natoms
-		fgets(input,string::M,reader);//natoms
+		fgets(input,M,reader);//natoms
 		const int nAtoms_=std::atoi(input);
 		if(traj.frame(t).nAtoms()!=nAtoms_) throw std::invalid_argument("Error in XYZ::read(const char*,Interval&,const Atom&,Trajectory&): Invalid number of atoms.");
 		//read header
@@ -98,35 +100,38 @@ void read(const char* file, const Interval& interval, const Atom& atom, Trajecto
 		int ni=-1; int qi=-1; int mi=-1;
 		Eigen::Vector3i ri=Eigen::Vector3i::Constant(-1);
 		Eigen::Vector3i fi=Eigen::Vector3i::Constant(-1);
-		fgets(input,string::M,reader);
+		fgets(input,M,reader);
 		string::to_upper(input);
 		if(std::strstr(input,"PROPERTIES")!=NULL){
-			token.read(std::strstr(input,"PROPERTIES")," \r\t\n=");
+			token.read(std::strstr(input,"PROPERTIES")," \r\t\n=").next();
 			const std::string propstr=token.next();
 			Token proptok=Token(propstr,":");
 			while(!proptok.end()){
 				const std::string tag=proptok.next();
 				if(tag=="SPECIES"){
-					if(token.next()!="S") throw std::runtime_error("ERROR in XYZ::read(const char*,const Atom&,Structure&): invalid name data type.");
-					else if(std::atoi(token.next().c_str())!=1) throw std::runtime_error("ERROR in XYZ::read(const char*,const Atom&,Structure&): invalid name length.");
+					if(proptok.next()!="S") throw std::runtime_error(funcame+": invalid name data type.");
+					else if(std::atoi(proptok.next().c_str())!=1) throw std::runtime_error(funcame+": invalid name length.");
 					else ni=ndata++;
-				} else if(tag=="POS" || tag=="POSN" || tag=="POSITION"){
-					if(token.next()!="R") throw std::runtime_error("ERROR in XYZ::read(const char*,const Atom&,Structure&): invalid position data type.");
-					else if(std::atoi(token.next().c_str())!=3) throw std::runtime_error("ERROR in XYZ::read(const char*,const Atom&,Structure&): invalid position length.");
-					else for(int i=0; i<3; ++i) ri[i]=ndata++;
-				} else if(tag=="FORCES" || tag=="FORCE"){
-					if(token.next()!="R") throw std::runtime_error("ERROR in XYZ::read(const char*,const Atom&,Structure&): invalid force data type.");
-					else if(std::atoi(token.next().c_str())!=3) throw std::runtime_error("ERROR in XYZ::read(const char*,const Atom&,Structure&): invalid force length.");
-					else for(int i=0; i<3; ++i) fi[i]=ndata++;
 				} else if(tag=="CHARGE" || tag=="CHG" || tag=="Q"){
 					if(proptok.next()!="R") throw std::runtime_error(funcame+": invalid charge data type.");
 					else if(std::atoi(proptok.next().c_str())!=1) throw std::runtime_error(funcame+": invalid charge length.");
 					else qi=ndata++;
 				} else if(tag=="MASS"){
-					if(proptok.next()!="R") throw std::runtime_error(funcame+": invalid charge data type.");
-					else if(std::atoi(proptok.next().c_str())!=1) throw std::runtime_error(funcame+": invalid charge length.");
+					if(proptok.next()!="R") throw std::runtime_error(funcame+": invalid mass data type.");
+					else if(std::atoi(proptok.next().c_str())!=1) throw std::runtime_error(funcame+": invalid mass length.");
 					else mi=ndata++;
-				} 
+				} else if(tag=="POS" || tag=="POSN" || tag=="POSITION"){
+					if(proptok.next()!="R") throw std::runtime_error(funcame+": invalid position data type.");
+					else if(std::atoi(proptok.next().c_str())!=3) throw std::runtime_error(funcame+": invalid position length.");
+					else for(int i=0; i<3; ++i) ri[i]=ndata++;
+				} else if(tag=="FORCES" || tag=="FORCE"){
+					if(proptok.next()!="R") throw std::runtime_error(funcame+": invalid force data type.");
+					else if(std::atoi(proptok.next().c_str())!=3) throw std::runtime_error(funcame+": invalid force length.");
+					else for(int i=0; i<3; ++i) fi[i]=ndata++;
+				} else { //unknown tag
+					proptok.next();//read tag
+					ndata+=std::atoi(proptok.next().c_str());//read ndata
+				}
 			}
 		}
 		if(std::strstr(input,"POTENTIAL_ENERGY")!=NULL){
@@ -151,30 +156,27 @@ void read(const char* file, const Interval& interval, const Atom& atom, Trajecto
 		//read atom data
 		std::vector<std::string> sarr(ndata);
 		for(int n=0; n<nAtoms_; ++n){
-			/*fgets(input,string::M,reader);
-			std::sscanf(input,"%s %lf %lf %lf",name,&r[0],&r[1],&r[2]);
-			traj.frame(t).posn(n).noalias()=s_len*r;
-			if(atom.name()) traj.frame(t).name(n)=name;*/
-			token.read(fgets(input,string::M,reader),string::WS);
+			token.read(fgets(input,M,reader),string::WS);
+			int c=0;
 			while(!token.end()) sarr[c++]=token.next();
 			if(atom.name() && ni>=0){
-				traj.frame(t).name(i)=sarr[ni];
+				traj.frame(t).name(n)=sarr[ni];
 			} 
 			if(atom.charge() && qi>=0){
-				traj.frame(t).charge(i)=std::atof(sarr[qi].c_str());
+				traj.frame(t).charge(n)=std::atof(sarr[qi].c_str());
 			}
 			if(atom.mass() && mi>=0){
-				traj.frame(t).mass(i)=std::atof(sarr[mi].c_str());
+				traj.frame(t).mass(n)=std::atof(sarr[mi].c_str());
 			}
 			if(atom.posn() && ri.minCoeff()>=0){
-				traj.frame(t).posn(i)[0]=std::atof(sarr[ri[0]].c_str())*s_len;
-				traj.frame(t).posn(i)[1]=std::atof(sarr[ri[1]].c_str())*s_len;
-				traj.frame(t).posn(i)[2]=std::atof(sarr[ri[2]].c_str())*s_len;
+				traj.frame(t).posn(n)[0]=std::atof(sarr[ri[0]].c_str())*s_len;
+				traj.frame(t).posn(n)[1]=std::atof(sarr[ri[1]].c_str())*s_len;
+				traj.frame(t).posn(n)[2]=std::atof(sarr[ri[2]].c_str())*s_len;
 			}
 			if(atom.force() && fi.minCoeff()>=0){
-				traj.frame(t).force(i)[0]=std::atof(sarr[fi[0]].c_str())*s_energy/s_len;
-				traj.frame(t).force(i)[1]=std::atof(sarr[fi[1]].c_str())*s_energy/s_len;
-				traj.frame(t).force(i)[2]=std::atof(sarr[fi[2]].c_str())*s_energy/s_len;
+				traj.frame(t).force(n)[0]=std::atof(sarr[fi[0]].c_str())*s_energy/s_len;
+				traj.frame(t).force(n)[1]=std::atof(sarr[fi[1]].c_str())*s_energy/s_len;
+				traj.frame(t).force(n)[2]=std::atof(sarr[fi[2]].c_str())*s_energy/s_len;
 			}
 		}
 		//set the cell
@@ -182,10 +184,10 @@ void read(const char* file, const Interval& interval, const Atom& atom, Trajecto
 		if(lv.norm()>0) static_cast<Cell&>(traj.frame(t)).init(lv);
 		//skip "stride-1" steps
 		for(int tt=0; tt<interval.stride()-1; ++tt){
-			fgets(input,string::M,reader);//natoms
+			fgets(input,M,reader);//natoms
 			const int NN=std::atoi(input);
-			fgets(input,string::M,reader);//comment line
-			for(int n=0; n<NN; ++n) fgets(input,string::M,reader);
+			fgets(input,M,reader);//comment line
+			for(int n=0; n<NN; ++n) fgets(input,M,reader);
 		}
 	}
 	
