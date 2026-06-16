@@ -15,6 +15,9 @@ Structure& read_struc(const char* file, FILE_FORMAT::type format, const Atom& at
 		case FILE_FORMAT::POSCAR:
 			VASP::POSCAR::read(file,atom,struc);
 		break;
+		case FILE_FORMAT::VASP_XML:
+			VASP::XML::read(file,atom,struc);
+		break;
 		case FILE_FORMAT::XYZ:
 			XYZ::read(file,atom,struc);
 		break;
