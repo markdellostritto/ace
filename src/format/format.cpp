@@ -9,6 +9,7 @@
 FILE_FORMAT::type FILE_FORMAT::read(const char* str){
 	if(std::strcmp(str,"POSCAR")==0) return FILE_FORMAT::POSCAR;
 	else if(std::strcmp(str,"XDATCAR")==0) return FILE_FORMAT::XDATCAR;
+	else if(std::strcmp(str,"VASP_XML")==0) return FILE_FORMAT::VASP_XML;
 	else if(std::strcmp(str,"LAMMPS")==0) return FILE_FORMAT::LAMMPS;
 	else if(std::strcmp(str,"XYZ")==0) return FILE_FORMAT::XYZ;
 	else if(std::strcmp(str,"CUBE")==0) return FILE_FORMAT::CUBE;
@@ -21,6 +22,7 @@ static const char* name(const FILE_FORMAT::type& format){
 	switch(format){
 		case FILE_FORMAT::POSCAR: return "POSCAR";
 		case FILE_FORMAT::XDATCAR: return "XDATCAR";
+		case FILE_FORMAT::VASP_XML: return "VASP_XML";
 		case FILE_FORMAT::LAMMPS: return "LAMMPS";
 		case FILE_FORMAT::XYZ: return "XYZ";
 		case FILE_FORMAT::CUBE: return "CUBE";
@@ -34,6 +36,7 @@ std::ostream& operator<<(std::ostream& out, FILE_FORMAT::type& format){
 	switch(format){
 		case FILE_FORMAT::POSCAR: out<<"POSCAR"; break;
 		case FILE_FORMAT::XDATCAR: out<<"XDATCAR"; break;
+		case FILE_FORMAT::VASP_XML: out<<"VASP_XML"; break;
 		case FILE_FORMAT::LAMMPS: out<<"LAMMPS"; break;
 		case FILE_FORMAT::XYZ: out<<"XYZ"; break;
 		case FILE_FORMAT::CUBE: out<<"CUBE"; break;

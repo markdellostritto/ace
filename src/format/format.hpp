@@ -12,6 +12,7 @@ struct FILE_FORMAT{
 	enum type{
 		POSCAR,//VASP poscar file
 		XDATCAR,//VASP xdatcar file
+		VASP_XML,//VASP xml file
 		LAMMPS,//LAMMPS dump file
 		XYZ,//XYZ file
 		CUBE,//cube file
