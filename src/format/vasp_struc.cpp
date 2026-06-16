@@ -37,6 +37,7 @@ void read(const char* file, const Atom& atom, Structure& struc){
 	fclose(reader);
 	reader=NULL;
 }
+
 void read(FILE* reader, const Atom& atom, Structure& struc){
 	const char* funcName="read(FILE*,const Atom&,Structure&)";
 	if(VASP_PRINT_FUNC>0) std::cout<<NAMESPACE_GLOBAL<<"::"<<NAMESPACE_LOCAL<<funcName<<":\n";
@@ -280,6 +281,192 @@ void write(FILE* writer, const Atom& atom, const Structure& struc){
 	}
 	
 	if(error) throw std::runtime_error("I/O Exception: Could not write data.");
+}
+
+}
+
+namespace XML{
+
+void read(const char* file, const Atom& atom, Structure& struc){
+	const char* funcName="read(const char*,const Atom&,Structure&)";
+	if(VASP_PRINT_FUNC>0) std::cout<<NAMESPACE_GLOBAL<<"::"<<NAMESPACE_LOCAL<<funcName<<":\n";
+	//open file 
+	FILE* reader=fopen(file,"r");
+	if(reader==NULL) throw std::runtime_error(std::string("I/O Error: Could not open file: ")+file);
+	//read vasp
+	read(reader,atom,struc);
+	//close file
+	fclose(reader);
+	reader=NULL;
+}
+
+void read(FILE* reader, const Atom& atom, Structure& struc){
+	static const char* funcName="read<AtomT>(FILE*,const Atom&,Structure&)";
+	if(VASP_PRINT_FUNC>0) std::cout<<NAMESPACE_GLOBAL<<"::"<<NAMESPACE_LOCAL<<"::"<<funcName<<":\n";
+	
+	//====  local function variables ==== 
+	//file i/o
+		char* input=new char[string::M];
+		char* str_name=new char[string::M];
+		char* str_number=new char[string::M];
+		Token token;
+	//simulation flags
+		bool direct;//whether the coordinates are in direct or Cartesian coordinates
+	//cell
+		double scale=0.0;
+		Cell cell;
+		Eigen::Matrix3d lv;
+	//atom info
+		int nAtomsT=0;
+		int nTypes=0;
+		std::vector<int> nAtoms;//the number of atoms in each species
+		std::vector<std::string> names;//the names of each species
+		std::vector<int> types;
+	//units
+		double s_len=0.0,s_mass=0.0,s_energy=0.0;
+		if(units::Consts::system()==units::System::LJ){
+			s_len=1.0;
+			s_energy=1.0;
+			s_mass=1.0;
+		} else if(units::Consts::system()==units::System::AU){
+			s_len=units::Ang2Bohr;
+			s_energy=units::Eh2Ev;
+			s_mass=units::MPoME;
+		} else if(units::Consts::system()==units::System::METAL){
+			s_len=1.0;
+			s_energy=1.0;
+			s_mass=1.0;
+		} else throw std::runtime_error("Invalid units.");
+	//misc
+		bool error=false;
+		
+	try{
+		//==== read in the atom info ====
+		if(VASP_PRINT_STATUS>0) std::cout<<"reading in atom info\n";
+		std::rewind(reader);
+		while(fgets(input,string::M,reader)!=NULL){
+			if(std::strstr(input,"atominfo")!=NULL){
+				Token token;
+				//read number of atoms
+				token.read(fgets(input,string::M,reader),"<> \r\t\n").next();
+				nAtomsT=std::atoi(token.next().c_str());
+				types.resize(nAtomsT);
+				//read the number of types
+				token.read(fgets(input,string::M,reader),"<> \r\t\n").next();
+				nTypes=std::atoi(token.next().c_str());
+				names.resize(nTypes);
+				nAtoms.resize(nTypes,0);
+				//read atom names
+				for(int i=0; i<5; ++i) fgets(input,string::M,reader);
+				for(int i=0; i<nAtomsT; ++i){
+					token.read(fgets(input,string::M,reader),"<> \r\t\n");
+					std::string name=token.next(3);
+					const int index=std::atoi(token.next(3).c_str())-1;
+					names[index]=name;
+					nAtoms[index]++;
+					types[i]=index;
+				}
+				break;
+			}
+		}
+		if(VASP_PRINT_STATUS>0){
+			std::cout<<"ATOM_NAMES = "; for(int i=0; i<names.size(); ++i) std::cout<<names[i]<<" "; std::cout<<"\n";
+			std::cout<<"ATOM_NUMBERS = "; for(int i=0; i<nAtoms.size(); ++i) std::cout<<nAtoms[i]<<" "; std::cout<<"\n";
+		}
+		
+		//==== resize the simulation ====
+		if(VASP_PRINT_STATUS>0) std::cout<<"resizing the simulation\n";
+		struc.resize(nAtomsT,atom);
+		if(atom.type()){
+			for(int i=0; i<struc.nAtoms(); ++i){
+				struc.type(i)=types[i];
+			}
+		}
+		if(atom.name()){
+			for(int i=0; i<struc.nAtoms(); ++i){
+				struc.name(i)=names[types[i]];
+			}
+		}
+		
+		//==== read the cells ====
+		if(VASP_PRINT_STATUS>0) std::cout<<"reading the cells\n";
+		std::rewind(reader);
+		while(fgets(input,string::M,reader)!=NULL){
+			if(std::strstr(input,"basis")!=NULL){
+				Token token;
+				token.read(fgets(input,string::M,reader),string::WS).next();
+				lv(0,0)=std::atof(token.next().c_str());
+				lv(1,0)=std::atof(token.next().c_str());
+				lv(2,0)=std::atof(token.next().c_str());
+				token.read(fgets(input,string::M,reader),string::WS).next();
+				lv(0,1)=std::atof(token.next().c_str());
+				lv(1,1)=std::atof(token.next().c_str());
+				lv(2,1)=std::atof(token.next().c_str());
+				token.read(fgets(input,string::M,reader),string::WS).next();
+				lv(0,2)=std::atof(token.next().c_str());
+				lv(1,2)=std::atof(token.next().c_str());
+				lv(2,2)=std::atof(token.next().c_str());
+				lv*=s_len;
+				static_cast<Cell&>(struc).init(lv);
+				break;
+			}
+		}
+		
+		//==== read in the energies ====
+		if(VASP_PRINT_STATUS>0) std::cout<<"reading in the energies\n";
+		std::rewind(reader);
+		while(fgets(input,string::M,reader)!=NULL){
+			if(std::strstr(input,"e_fr_energy")!=NULL){
+				token.read(input,"<> \r\t\n");
+				const double pe=std::atof(token.next(3).c_str());
+				struc.pe()=pe*s_energy;
+			}
+		}
+	
+		//==== read in the positions ====
+		if(VASP_PRINT_STATUS>0) std::cout<<"reading in positions\n";
+		std::rewind(reader);
+		while(fgets(input,string::M,reader)!=NULL){
+			if(std::strstr(input,"positions")!=NULL){
+				for(int n=0; n<struc.nAtoms(); ++n){
+					Token token;
+					token.read(fgets(input,string::M,reader),string::WS).next();
+					Eigen::Vector3d posn;
+					posn[0]=std::atof(token.next().c_str())*s_len;
+					posn[1]=std::atof(token.next().c_str())*s_len;
+					posn[2]=std::atof(token.next().c_str())*s_len;
+					struc.posn(n)=struc.R()*posn;
+				}
+				break;
+			}
+		}
+
+		//==== read in the forces ====
+		if(VASP_PRINT_STATUS>0) std::cout<<"reading in forces\n";
+		std::rewind(reader);
+		while(fgets(input,string::M,reader)!=NULL){
+			if(std::strstr(input,"forces")!=NULL){
+				for(int n=0; n<struc.nAtoms(); ++n){
+					Token token;
+					token.read(fgets(input,string::M,reader),string::WS).next();
+					struc.force(n)[0]=std::atof(token.next().c_str())*s_energy/s_len;
+					struc.force(n)[1]=std::atof(token.next().c_str())*s_energy/s_len;
+					struc.force(n)[2]=std::atof(token.next().c_str())*s_energy/s_len;
+				}
+				break;
+			}
+		}
+	}catch(std::exception& e){
+		std::cout<<"ERROR in "<<NAMESPACE_GLOBAL<<"::"<<NAMESPACE_LOCAL<<"::"<<funcName<<":\n";
+		std::cout<<e.what()<<"\n";
+		error=true;
+	}
+	
+	delete[] input;
+	delete[] str_name;
+	delete[] str_number;
+	
+	if(error) throw std::runtime_error("I/O Exception: Could not read data.");
 }
 
 }

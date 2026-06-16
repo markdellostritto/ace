@@ -27,6 +27,14 @@ void write(FILE* writer, const Atom& atom, const Structure& struc);
 
 }
 
+namespace XML{
+
+static const char* NAMESPACE_LOCAL="XML";
+void read(const char* file, const Atom& atom, Structure& struc);
+void read(FILE* reader, const Atom& atom, Structure& struc);
+
+}
+
 }
 
 
